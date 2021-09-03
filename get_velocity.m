@@ -9,8 +9,8 @@ function [accel] = get_velocity(state, target_point)
     target_y = target_point(2,1);
     
     DELTA_CHANGE = 0.05;
-    MAX_VEL = 0.5;
-    APPROACH_VEL = 0.2;
+    MAX_VEL = 0.3;
+    APPROACH_VEL = 0.15;
     
     delta_x = target_x - x;
     delta_y = target_y - y;

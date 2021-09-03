@@ -1,6 +1,5 @@
 function [x_hat, P] = filter_sonar(x_hat, P, x_gt, w, w_perceived, NUM_AGENTS, NUM_STATES, prob_detection, sonar_dist)
     states_per_agent = NUM_STATES / NUM_AGENTS;
-    agent_states = reshape(x_gt, states_per_agent, NUM_AGENTS);
     
     for a = 1:NUM_AGENTS
         start_row1 = states_per_agent*(a-1)+1;
@@ -12,9 +11,12 @@ function [x_hat, P] = filter_sonar(x_hat, P, x_gt, w, w_perceived, NUM_AGENTS, N
             agent2 = x_gt(start_row2:end_row2,1);
             
             delta = agent2 - agent1;
+            
+            % Check if in range and simulate the probability the sonar is
+            % pointing in the right direction
             if norm(delta) < sonar_dist && binornd(1,prob_detection)
                 
-                delta = delta;% + normrnd(0, w, 2, 1);
+                delta = delta + normrnd(0, w, 2, 1);
 
                 H = zeros(2,NUM_STATES);
                 H(1, start_row1) = -1;
@@ -26,4 +28,5 @@ function [x_hat, P] = filter_sonar(x_hat, P, x_gt, w, w_perceived, NUM_AGENTS, N
                 P = P - K*H*P;
             end
         end
+    end
 end

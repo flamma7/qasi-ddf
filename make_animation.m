@@ -4,7 +4,7 @@ function [] = make_animation(NUM_STATES, NUM_AGENTS, MAP_DIM, NUM_LOOPS, x_gt_hi
     for i = 1:NUM_AGENTS
         positions(i,:) = x_gt_history( 4*(i-1)+1 : 4*(i-1)+2, 1)';
     end
-    sizes = repelem(25, NUM_AGENTS);
+    sizes = [75 repelem(25, NUM_AGENTS-1)];
     colors = linspace(1,10,NUM_AGENTS);
 
     % Plot the covariance bounds
@@ -36,7 +36,7 @@ function [] = make_animation(NUM_STATES, NUM_AGENTS, MAP_DIM, NUM_LOOPS, x_gt_hi
         plot1.XData = positions(:,1);
         plot1.YData = positions(:,2);
         title(int2str(l));
-        pause(0.05)
+        pause(0.1);
     end
 
 end
