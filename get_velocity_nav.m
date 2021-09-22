@@ -22,7 +22,6 @@ function [accel] = get_velocity_nav(state, target_point)
     end
 
     TARGET_V = 0.3;
-    % DELTA_CHANGE = 0.05;
     DELTA_CHANGE = 0.1;
 
     if abs(delta_angle) > 0.2

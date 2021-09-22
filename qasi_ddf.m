@@ -10,10 +10,10 @@ close all; clear all; clc;
 % 7. Increase number of agents & duration
 % 8. Selective information sharing (compare w/ random sharing)
 
-rng(1);
+rng(0);
 
 % Initialize
-BLUE_NUM = 1; % Blue agents come first in the state vector
+BLUE_NUM = 2; % Blue agents come first in the state vector
 RED_NUM = 0;
 NUM_AGENTS = BLUE_NUM + RED_NUM;
 STATES = 6; % Each agent has x,y,theta, x_vel,y_vel, theta_vel
@@ -54,11 +54,13 @@ x_gt_history = zeros(TOTAL_STATES, NUM_LOOPS); % x,y,theta,fwd, strafe, theta_do
 
 % Initialize Navigation Filter Estimate
 P = 0.1*eye(STATES);
-x_nav = x_gt;
-P_nav = P;
+x_navs = reshape( x_gt, STATES, BLUE_NUM);
+P_navs = repmat(P, 1, BLUE_NUM)
+% x_nav = x_gt;
+% P_nav = P;
 
-x_nav_history = zeros(TOTAL_STATES, NUM_LOOPS);
-P_nav_history = zeros(TOTAL_STATES, TOTAL_STATES*NUM_LOOPS);
+x_nav_history = zeros(STATES, NUM_LOOPS);
+P_nav_history = zeros(STATES, STATES*NUM_LOOPS);
 
 % Control Input
 accel = zeros(2*NUM_AGENTS,1); % FWD acceleration and theta acceleration
@@ -73,7 +75,7 @@ waypoints = randi(2*MAP_DIM, 2*NUM_AGENTS,1) - MAP_DIM;
 waypoints
 
 loop_num = 1;
-while loop_num < NUM_LOOPS
+while loop_num < NUM_LOOPS + 1
     
     % Calculate new waypoints
     for i = 1:NUM_AGENTS
@@ -92,25 +94,33 @@ while loop_num < NUM_LOOPS
     end
     
     % Update Truth
-    [x_gt, Z] = propagate(x_gt, zeros(STATES));
+    for i =1:NUM_AGENTS
+        x_gt_agent = x_gt(STATES*(i-1)+1:STATES*i, 1);
+        [x_gt_agent, Z] = propagate(x_gt_agent, zeros(STATES));
+        x_gt(STATES*(i-1)+1:STATES*i,1) = x_gt_agent;
+    end
     x_gt = x_gt + U*accel + Q*normrnd(0,q,TOTAL_STATES,1); % normal propagation and add scaled noise
     x_gt_history(:,loop_num) = x_gt;
 
-    % Predict
-    [x_nav, P_nav] = propagate( x_nav, P_nav );
-    x_nav = x_nav + U*accel;
-    P_nav = P_nav + q_perceived*Q;
+    for a = 1:BLUE_NUM
+        [x_nav, P_nav] = get_estimate(x_navs, P_navs, STATES, a);
+        [x_nav, P_nav] = propagate( x_nav, P_nav ); % Predict
 
-    % Correct
-    % Receive DVL
-    [x_nav, P_nav] = filter_dvl(x_nav, P_nav, x_gt, w, w_perceived, NUM_AGENTS, TOTAL_STATES, 1);
+        ts2a = zeros(STATES, TOTAL_STATES);
+        ts2a(:, STATES*(a-1)+1 : STATES*a) = eye(STATES);
 
-    % Receive Gyro
-    [x_nav, P_nav] = filter_gyro(x_nav, P_nav, x_gt, w, w_perceived, NUM_AGENTS, TOTAL_STATES, 1);
+        x_nav = x_nav + (ts2a*U)*accel;
+        P_nav = P_nav + q_perceived*(ts2a * Q * ts2a');
 
-    % Receive Compass
-    [x_nav, P_nav] = filter_compass(x_nav, P_nav, x_gt, w, w_perceived, NUM_AGENTS, TOTAL_STATES, 1);
+        % Correct
+        [x_nav, P_nav] = filter_dvl(x_nav, P_nav, x_gt, w, w_perceived, NUM_AGENTS, TOTAL_STATES, a); % DVL
+        [x_nav, P_nav] = filter_gyro(x_nav, P_nav, x_gt, w, w_perceived, NUM_AGENTS, TOTAL_STATES, a); % Gyro
+        [x_nav, P_nav] = filter_compass(x_nav, P_nav, x_gt, w, w_perceived, NUM_AGENTS, TOTAL_STATES, a); % Compass
 
+        [x_navs, P_navs] = set_estimate(x_navs, P_navs, STATES, x_nav, P_nav, a);
+    end
+
+    [x_nav, P_nav] = get_estimate(x_navs, P_navs, STATES, AGENT_TO_PLOT);
     x_nav_history(:,loop_num) = x_nav;
     P_nav_history(:, STATES*(loop_num-1)+1 : STATES*loop_num) = P_nav;
 
@@ -118,9 +128,12 @@ while loop_num < NUM_LOOPS
 end
 
 % Plot error
-error = x_gt_history - x_nav_history;
-% plot_error_nav(error, P_nav_history, NUM_LOOPS, TOTAL_STATES, NUM_AGENTS);
+ts2a = zeros(STATES, TOTAL_STATES);
+ts2a(:, STATES*(AGENT_TO_PLOT-1)+1 : STATES*AGENT_TO_PLOT) = eye(STATES);
+
+error = (ts2a*x_gt_history) - x_nav_history;
+plot_error_nav(error, P_nav_history, NUM_LOOPS, STATES, AGENT_TO_PLOT);
 %plot_norm_error(error);
 
 % Make animation
-make_animation_nav(STATES, NUM_AGENTS, MAP_DIM, NUM_LOOPS, x_gt_history, x_nav_history, P_nav_history);
+% make_animation_nav(STATES, NUM_AGENTS, MAP_DIM, NUM_LOOPS, x_gt_history, x_nav_history, P_nav_history);
