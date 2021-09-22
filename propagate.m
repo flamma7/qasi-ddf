@@ -19,7 +19,7 @@ function [body_new, body_new_Q] = propagate(body, body_Q)
         theta_new = theta_new + 2*pi;
     end
 
-    body_new = [x_new, y_new, theta, v, vp, theta_dot]';
+    body_new = [x_new, y_new, theta_new, v, vp, theta_dot]';
 
     dxdtheta = -v*sin(theta);
     dxdv = cos(theta);

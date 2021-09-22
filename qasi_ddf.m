@@ -10,7 +10,7 @@ close all; clear all; clc;
 % 7. Increase number of agents & duration
 % 8. Selective information sharing (compare w/ random sharing)
 
-rng(0);
+rng(1);
 
 % Initialize
 BLUE_NUM = 1; % Blue agents come first in the state vector
@@ -61,40 +61,44 @@ x_nav_history = zeros(TOTAL_STATES, NUM_LOOPS);
 P_nav_history = zeros(TOTAL_STATES, TOTAL_STATES*NUM_LOOPS);
 
 % Control Input
-% accel = zeros(2*NUM_AGENTS,1);
-% U = zeros(TOTAL_STATES, 2*NUM_AGENTS);
-% for i = 1:NUM_AGENTS
-%     U(4*i-1,2*i-1) = 1;
-%     U(4*i,2*i) = 1;
-% end
+accel = zeros(2*NUM_AGENTS,1); % FWD acceleration and theta acceleration
+U = zeros(TOTAL_STATES, 2*NUM_AGENTS);
+for i = 1:NUM_AGENTS
+    U(STATES*(i-1)+4, 2*(i-1)+1) = 1; % FWD velocity
+    U(STATES*(i-1)+6, 2*(i-1)+2) = 1; % theta dot
+end
 
 % Initialize waypoints
-% waypoints = randi(2*MAP_DIM, 2*NUM_AGENTS,1) - MAP_DIM;
+waypoints = randi(2*MAP_DIM, 2*NUM_AGENTS,1) - MAP_DIM;
+waypoints
 
 loop_num = 1;
 while loop_num < NUM_LOOPS
     
     % Calculate new waypoints
-    % for i = 1:NUM_AGENTS
-    %     delta = waypoints(2*(i-1)+1 : 2*i) - x_gt(4*(i-1)+1:4*i-2,1);
-    %     if norm(delta) < 1
-    %         waypoints(2*(i-1)+1 : 2*i) = randi(2*MAP_DIM, 2,1) - MAP_DIM;
-    %     end
-    % end
+    for i = 1:NUM_AGENTS
+        delta = waypoints(2*(i-1)+1 : 2*i) - x_gt(STATES*(i-1)+1:STATES*(i-1)+2,1);
+        if norm(delta) < 1
+            waypoints(2*(i-1)+1 : 2*i) = randi(2*MAP_DIM, 2,1) - MAP_DIM;
+            disp('reached!');
+        end
+        
+    end
     
     % Get control input
-    % accel = zeros(2*NUM_AGENTS,1);
-    % for i= 1:NUM_AGENTS
-    %     accel(2*(i-1)+1 : 2*i,1) = get_velocity( x_gt(4*(i-1)+1 : 4*i , 1), waypoints(2*(i-1)+1:2*i,1) );
-    % end
+    accel = zeros(2*NUM_AGENTS,1);
+    for i= 1:NUM_AGENTS
+        accel(2*(i-1)+1 : 2*i,1) = get_velocity_nav( x_gt(STATES*(i-1)+1 : STATES*i , 1), waypoints(2*(i-1)+1:2*i,1) );
+    end
     
     % Update Truth
     [x_gt, Z] = propagate(x_gt, zeros(STATES));
-    x_gt = x_gt + Q*normrnd(0,q,TOTAL_STATES,1); % normal propagation and add scaled noise
+    x_gt = x_gt + U*accel + Q*normrnd(0,q,TOTAL_STATES,1); % normal propagation and add scaled noise
     x_gt_history(:,loop_num) = x_gt;
 
     % Predict
     [x_nav, P_nav] = propagate( x_nav, P_nav );
+    x_nav = x_nav + U*accel;
     P_nav = P_nav + q_perceived*Q;
 
     % Correct
@@ -115,7 +119,7 @@ end
 
 % Plot error
 error = x_gt_history - x_nav_history;
-plot_error_nav(error, P_nav_history, NUM_LOOPS, TOTAL_STATES, NUM_AGENTS);
+% plot_error_nav(error, P_nav_history, NUM_LOOPS, TOTAL_STATES, NUM_AGENTS);
 %plot_norm_error(error);
 
 % Make animation
