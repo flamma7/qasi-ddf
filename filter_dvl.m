@@ -1,15 +1,15 @@
-function [x_hat, P] = filter_dvl(x_hat, P, x_gt, w, w_perceived, NUM_AGENTS, NUM_STATES, agent)
+function [x_nav, P_nav] = filter_dvl(x_nav, P_nav, x_gt, w, w_perceived, NUM_AGENTS, TOTAL_STATES, agent)
     
-    states_per_agent = NUM_STATES / NUM_AGENTS;
-    start_row = states_per_agent * (agent-1) + 3;
+    STATES = TOTAL_STATES / NUM_AGENTS;
+    start_row = STATES * (agent-1) + 4;
     end_row = start_row + 1;
     dvl = x_gt(start_row:end_row, 1) + normrnd(0, w, 2, 1);
 
-    H = zeros(2, NUM_STATES);
+    H = zeros(2, STATES);
     H(1,start_row) = 1;
     H(2,end_row) = 1;
-    K = P * H' * inv(H * P * H' + w_perceived*eye(2));
-    x_hat = x_hat + K * (dvl - H * x_hat);
-    P = P - K*H*P;
+    K = P_nav * H' * inv(H * P_nav * H' + w_perceived*eye(2));
+    x_nav = x_nav + K * (dvl - H * x_nav);
+    P_nav = P_nav - K*H*P_nav;
     
 end

@@ -50,127 +50,73 @@ for i =1:NUM_AGENTS % Initialize all velocities to zero
     x_gt(STATES*i-1,1) = 0;
     x_gt(STATES*i,1) = 0;
 end
-x_gt_history = zeros(TOTAL_STATES, NUM_LOOPS);
-F = eye(TOTAL_STATES);
-for i = 1:NUM_AGENTS
-    F(STATES*i-5, STATES*i-2) = 1;
-    F(STATES*i-4, STATES*i-1) = 1;
-    F(STATES*i-3, STATES*i) = 1;
-end
+x_gt_history = zeros(TOTAL_STATES, NUM_LOOPS); % x,y,theta,fwd, strafe, theta_dot
 
-% Initialize Estimates
-P = 0.1*eye(TOTAL_STATES);
-x_hats = repmat(x_gt, 1, BLUE_NUM);
-Ps = repmat(P, 1,BLUE_NUM);
+% Initialize Navigation Filter Estimate
+P = 0.1*eye(STATES);
+x_nav = x_gt;
+P_nav = P;
 
-x_hat_history = zeros(TOTAL_STATES, NUM_LOOPS);
-P_history = zeros(TOTAL_STATES, TOTAL_STATES*NUM_LOOPS);
+x_nav_history = zeros(TOTAL_STATES, NUM_LOOPS);
+P_nav_history = zeros(TOTAL_STATES, TOTAL_STATES*NUM_LOOPS);
 
 % Control Input
-accel = zeros(2*NUM_AGENTS,1);
-U = zeros(TOTAL_STATES, 2*NUM_AGENTS);
-for i = 1:NUM_AGENTS
-    U(4*i-1,2*i-1) = 1;
-    U(4*i,2*i) = 1;
-end
+% accel = zeros(2*NUM_AGENTS,1);
+% U = zeros(TOTAL_STATES, 2*NUM_AGENTS);
+% for i = 1:NUM_AGENTS
+%     U(4*i-1,2*i-1) = 1;
+%     U(4*i,2*i) = 1;
+% end
 
 % Initialize waypoints
-waypoints = randi(2*MAP_DIM, 2*NUM_AGENTS,1) - MAP_DIM;
+% waypoints = randi(2*MAP_DIM, 2*NUM_AGENTS,1) - MAP_DIM;
 
 loop_num = 1;
 while loop_num < NUM_LOOPS
     
     % Calculate new waypoints
-    for i = 1:NUM_AGENTS
-        delta = waypoints(2*(i-1)+1 : 2*i) - x_gt(4*(i-1)+1:4*i-2,1);
-        if norm(delta) < 1
-            waypoints(2*(i-1)+1 : 2*i) = randi(2*MAP_DIM, 2,1) - MAP_DIM;
-        end
-    end
+    % for i = 1:NUM_AGENTS
+    %     delta = waypoints(2*(i-1)+1 : 2*i) - x_gt(4*(i-1)+1:4*i-2,1);
+    %     if norm(delta) < 1
+    %         waypoints(2*(i-1)+1 : 2*i) = randi(2*MAP_DIM, 2,1) - MAP_DIM;
+    %     end
+    % end
     
     % Get control input
-    accel = zeros(2*NUM_AGENTS,1);
-    for i= 1:NUM_AGENTS
-        accel(2*(i-1)+1 : 2*i,1) = get_velocity( x_gt(4*(i-1)+1 : 4*i , 1), waypoints(2*(i-1)+1:2*i,1) );
-    end
+    % accel = zeros(2*NUM_AGENTS,1);
+    % for i= 1:NUM_AGENTS
+    %     accel(2*(i-1)+1 : 2*i,1) = get_velocity( x_gt(4*(i-1)+1 : 4*i , 1), waypoints(2*(i-1)+1:2*i,1) );
+    % end
     
-    % Update and store truth
-    x_gt = F*x_gt + U*accel + Q*normrnd(0,q,TOTAL_STATES,1);
+    % Update Truth
+    [x_gt, Z] = propagate(x_gt, zeros(STATES));
+    x_gt = x_gt + Q*normrnd(0,q,TOTAL_STATES,1); % normal propagation and add scaled noise
     x_gt_history(:,loop_num) = x_gt;
 
-    % Run prediction step on each filter
-    for a = 1:BLUE_NUM
-        [x_hat, P] = get_estimate(x_hats, Ps, TOTAL_STATES, a);
-        my_accel = zeros(size(accel));
-        my_accel(2*a -1:2*a,1) = accel(2*a-1:2*a,1);
-        
-        % Propagate Filter
-        x_hat = F*x_hat + U*my_accel;
-        P = F*P*F' + q_perceived*Q;
+    % Predict
+    [x_nav, P_nav] = propagate( x_nav, P_nav );
+    P_nav = P_nav + q_perceived*Q;
 
-        % Filter Measurements
-        [x_hat, P] = filter_dvl(x_hat,P,x_gt, w, w_perceived, NUM_AGENTS, TOTAL_STATES, a);
-        [x_hat, P] = filter_sonar(x_hat, P, x_gt, w, w_perceived, NUM_AGENTS, TOTAL_STATES, PROB_DETECTION, SONAR_RANGE);
-        
-        [x_hats, Ps] = set_estimate(x_hats, Ps, TOTAL_STATES, x_hat, P, a);
-    end
-    
-    % Schedule
-    % [3,3,4, 4, 4]
-    if schedule_count== 9 % Global Measurements
-        for a = 1:BLUE_NUM
-            [x_hat, P] = get_estimate(x_hats, Ps, TOTAL_STATES, a);
-            [x_hat, P] = filter_gps(x_hat,P,x_gt, w_gps, w_gps_perceived, NUM_AGENTS, TOTAL_STATES, 0);
-            [x_hats, Ps] = set_estimate(x_hats, Ps, TOTAL_STATES, x_hat, P, a);
-        end
-    else % Broadcast states
-       for a = 1:BLUE_NUM
-           if schedule_count== 4*a + 9
-               [x_hat1, P1] = get_estimate(x_hats, Ps, TOTAL_STATES, a);
-               for a2 = 1:BLUE_NUM
-                  if a == a2
-                      continue
-                  else
-                      [x_hat2, P2] = get_estimate(x_hats, Ps, TOTAL_STATES, a2);
-                      [c_hat, C] = covariance_intersect(x_hat1, P1, x_hat2, P2);
-                      [x_hats, Ps] = set_estimate(x_hats,Ps, TOTAL_STATES, c_hat, C, a2);
-                  end
-              end
-              break 
-           end
-       end
-       
-       if schedule_count== 4*BLUE_NUM + 9
-           schedule_count= 0;
-       end
-    end
-    schedule_count = schedule_count + 1;
+    % Correct
+    % Receive DVL
+    [x_nav, P_nav] = filter_dvl(x_nav, P_nav, x_gt, w, w_perceived, NUM_AGENTS, TOTAL_STATES, 1);
 
-    % Exchange estimates b/w agents
+    % Receive Gyro
+    [x_nav, P_nav] = filter_gyro(x_nav, P_nav, x_gt, w, w_perceived, NUM_AGENTS, TOTAL_STATES, 1);
 
-    % Store Estimates
-    [x_hat, P] = get_estimate(x_hats, Ps, TOTAL_STATES, AGENT_TO_PLOT);
-    x_hat_history(:, loop_num) = x_hat;
-    P_history(:, TOTAL_STATES*(loop_num-1)+1 : TOTAL_STATES*loop_num) = P;
+    % Receive Compass
+    [x_nav, P_nav] = filter_compass(x_nav, P_nav, x_gt, w, w_perceived, NUM_AGENTS, TOTAL_STATES, 1);
+
+    x_nav_history(:,loop_num) = x_nav;
+    P_nav_history(:, STATES*(loop_num-1)+1 : STATES*loop_num) = P_nav;
 
     loop_num = loop_num + 1;
 end
 
-% Find maximum of each element
-% maxes = zeros(size(P));
-% for i = 1:TOTAL_STATES
-%     elem_history = [];
-%     for k = 1:NUM_LOOPS
-%         elem_history = [elem_history, P_history(i,1+(k-1)*TOTAL_STATES)];
-%     end
-%     maxes(i,1) = max(abs(elem_history));    
-% end
-% maxes(:,1)
-
 % Plot error
-error = x_gt_history - x_hat_history;
-%plot_error(error, P_history, NUM_LOOPS, TOTAL_STATES, NUM_AGENTS);
+error = x_gt_history - x_nav_history;
+plot_error_nav(error, P_nav_history, NUM_LOOPS, TOTAL_STATES, NUM_AGENTS);
 %plot_norm_error(error);
 
 % Make animation
-%make_animation(TOTAL_STATES, NUM_AGENTS, MAP_DIM, NUM_LOOPS, x_gt_history, x_hat_history, P_history);
+make_animation_nav(STATES, NUM_AGENTS, MAP_DIM, NUM_LOOPS, x_gt_history, x_nav_history, P_nav_history);
