@@ -159,12 +159,10 @@ ts2a(:, STATES*(AGENT_TO_PLOT-1)+1 : STATES*AGENT_TO_PLOT) = eye(STATES);
 error = ts2a * (x_gt_history - x_nav_history);
 error = normalize_state(error, 1, STATES);
 P_nav_history_agent = ts2a * P_nav_history;
-plot_error_nav(error, P_nav_history, NUM_LOOPS, STATES, AGENT_TO_PLOT);
+% plot_error_nav(error, P_nav_history, NUM_LOOPS, STATES, AGENT_TO_PLOT);
 %plot_norm_error(error);
 
-ts2a = zeros(TOTAL_TRACK_STATES, TOTAL_STATES);
-% ts2a()
-% plot_error()
+plot_error(x_hat_error_history, P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_AGENTS, AGENT_TO_PLOT);
 
 % Make animation
 % make_animation_nav(STATES, NUM_AGENTS, MAP_DIM, NUM_LOOPS, x_gt_history, x_nav_history, P_nav_history);
