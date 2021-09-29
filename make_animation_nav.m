@@ -1,5 +1,5 @@
-function [] = make_animation_nav(STATES, MAP_DIM, NUM_LOOPS, x_gt_history, x_hat_history, P_history)
-    NUM_AGENTS = 1;
+function [] = make_animation_nav(STATES, NUM_AGENTS, MAP_DIM, NUM_LOOPS, x_gt_history, x_hat_history, P_history)
+
     TOTAL_STATES = STATES * NUM_AGENTS;
 
     positions = zeros(NUM_AGENTS,2);

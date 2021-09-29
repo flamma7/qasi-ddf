@@ -147,7 +147,7 @@ ts2a(:, STATES*(AGENT_TO_PLOT-1)+1 : STATES*AGENT_TO_PLOT) = eye(STATES);
 
 error = (ts2a*x_gt_history) - x_nav_history;
 plot_error_nav(error, P_nav_history, NUM_LOOPS, STATES, AGENT_TO_PLOT);
-% plot_norm_error(error);
+%plot_norm_error(error);
 
 % Make animation
-make_animation_nav(STATES, MAP_DIM, NUM_LOOPS, x_gt_history, x_nav_history, P_nav_history);
+% make_animation_nav(STATES, NUM_AGENTS, MAP_DIM, NUM_LOOPS, x_gt_history, x_nav_history, P_nav_history);
