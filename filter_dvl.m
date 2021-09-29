@@ -11,6 +11,7 @@ function [x_nav, P_nav] = filter_dvl(x_nav, P_nav, x_gt, w, w_perceived, NUM_AGE
 
     K = P_nav * H' * inv(H * P_nav * H' + w_perceived*eye(2));
     x_nav = x_nav + K * (dvl - H * x_nav);
+    x_nav = normalize_state(x_nav, 1, STATES);
     P_nav = P_nav - K*H*P_nav;
     
 end

@@ -8,6 +8,7 @@ function [x_nav, P_nav] = filter_compass(x_nav, P_nav, x_gt, w, w_perceived, NUM
     H = zeros(1, STATES);
     H(1,3) = 1;
     K = P_nav * H' * inv(H * P_nav * H' + w_perceived);
-    x_nav = x_nav + K * (meas - H * x_nav);
+    x_nav = x_nav + K * normalize_angle(meas - H * x_nav);
+    x_nav = normalize_state(x_nav, 1, STATES);
     P_nav = P_nav - K*H*P_nav;
 end

@@ -13,11 +13,13 @@ close all; clear all; clc;
 rng(1);
 
 % Initialize
-BLUE_NUM = 2; % Blue agents come first in the state vector
+BLUE_NUM = 3; % Blue agents come first in the state vector
 RED_NUM = 0;
 NUM_AGENTS = BLUE_NUM + RED_NUM;
 STATES = 6; % Each agent has x,y,theta, x_vel,y_vel, theta_vel
+TRACK_STATES = 4 * NUM_AGENTS; % x,y,x_dot, y_dot for each agent
 TOTAL_STATES = STATES * NUM_AGENTS; 
+TOTAL_TRACK_STATES = TRACK_STATES * NUM_AGENTS;
 NUM_LOOPS = 500;
 TIME_DELTA = 1;
 MAP_DIM = 20;
@@ -67,6 +69,8 @@ P_navs = repmat(P, 1, NUM_AGENTS);
 
 x_nav_history = zeros(size(x_gt_history));
 P_nav_history = zeros(TOTAL_STATES, STATES*NUM_LOOPS);
+x_hat_error_history = zeros(TOTAL_TRACK_STATES, NUM_LOOPS);
+P_history = zeros(TOTAL_TRACK_STATES, TRACK_STATES*NUM_LOOPS);
 
 % Control Input
 accel = zeros(2*NUM_AGENTS,1); % FWD acceleration and theta acceleration
@@ -106,6 +110,7 @@ while loop_num < NUM_LOOPS + 1
         x_gt(STATES*(i-1)+1:STATES*i,1) = x_gt_agent;
     end
     x_gt = x_gt + U*accel + Q*normrnd(0,q,TOTAL_STATES,1); % normal propagation and add scaled noise
+    x_gt = normalize_state(x_gt, NUM_AGENTS, STATES);
     x_gt_history(:,loop_num) = x_gt;
 
     for a = 1:BLUE_NUM
@@ -116,6 +121,7 @@ while loop_num < NUM_LOOPS + 1
         ts2a = zeros(STATES, TOTAL_STATES); % total states to agent ownship states permutation matrix
         ts2a(:, STATES*(a-1)+1 : STATES*a) = eye(STATES);
         x_nav = x_nav + (ts2a*U)*accel;
+        x_nav = normalize_state(x_nav, 1, STATES);
         P_nav = P_nav + q_perceived*(ts2a * Q * ts2a');
         % NAVIGATION FILTER CORRECTION
         [x_nav, P_nav] = filter_dvl(x_nav, P_nav, x_gt, w, w_perceived, NUM_AGENTS, TOTAL_STATES, a); % DVL
@@ -136,6 +142,12 @@ while loop_num < NUM_LOOPS + 1
         % Record history for plotting
         x_nav_history(STATES*(a-1)+1:STATES*a, loop_num) = x_nav;
         P_nav_history(STATES*(a-1)+1:STATES*a, STATES*(loop_num-1)+1 : STATES*loop_num) = P_nav;
+        % x_hat_history(TRACK_STATES*(a-1)+1:TRACK_STATES*a, loop_num) = x_hat;
+        P_history(TRACK_STATES*(a-1)+1:TRACK_STATES*a, TRACK_STATES*(loop_num-1)+1 : TRACK_STATES*loop_num) = P;
+
+        track_error = get_error(x_gt, x_hat, NUM_AGENTS, STATES);
+        x_hat_error_history(TRACK_STATES*(a-1)+1:TRACK_STATES*a, loop_num) = track_error;
+
     end
     loop_num = loop_num + 1;
 end
@@ -145,9 +157,14 @@ ts2a = zeros(STATES, TOTAL_STATES);
 ts2a(:, STATES*(AGENT_TO_PLOT-1)+1 : STATES*AGENT_TO_PLOT) = eye(STATES);
 
 error = ts2a * (x_gt_history - x_nav_history);
+error = normalize_state(error, 1, STATES);
 P_nav_history_agent = ts2a * P_nav_history;
 plot_error_nav(error, P_nav_history, NUM_LOOPS, STATES, AGENT_TO_PLOT);
 %plot_norm_error(error);
 
+ts2a = zeros(TOTAL_TRACK_STATES, TOTAL_STATES);
+% ts2a()
+% plot_error()
+
 % Make animation
-make_animation_nav(STATES, NUM_AGENTS, MAP_DIM, NUM_LOOPS, x_gt_history, x_nav_history, P_nav_history);
+% make_animation_nav(STATES, NUM_AGENTS, MAP_DIM, NUM_LOOPS, x_gt_history, x_nav_history, P_nav_history);
