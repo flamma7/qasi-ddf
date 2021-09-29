@@ -1,36 +1,20 @@
-function [body_new, body_new_Q] = propagate(body, body_Q)
+function [inertial_new, inertial_new_P] = propagate(inertial, inertial_P, NUM_AGENTS, q_perceived)
 
-    x = body(1);
-    y = body(2);
-    theta = body(3);
-    v = body(4);
-    vp = body(5);
-    theta_dot = body(6);
+    F = [];
+    Q = [];
+    for a = 1:NUM_AGENTS
+        F_local = eye(4);
+        F_local(1,3) = 1;
+        F_local(2,4) = 1;
+        F = blkdiag(F, F_local);
 
-    x_new = x + v * cos(theta);
-    y_new = y + v * sin(theta);
-    theta_new = theta + theta_dot;
-
-    % Regularize angles[-pi, pi]
-    while theta_new > pi 
-        theta_new = theta_new - 2*pi;
-    end
-    while theta_new < -pi
-        theta_new = theta_new + 2*pi;
+        Q_local = eye(4);
+        Q_local(3,3) = 0.1;
+        Q_local(4,4) = 0.1;
+        Q = blkdiag(Q, Q_local);
     end
 
-    body_new = [x_new, y_new, theta_new, v, vp, theta_dot]';
+    inertial_new = F * inertial;
+    inertial_new_P = F * inertial_P * F' + q_perceived * Q;
 
-    dxdtheta = -v*sin(theta);
-    dxdv = cos(theta);
-    dydtheta = v * cos(theta);
-    dydv = sin(theta);
-
-    F = eye(size(body_Q));
-    F(1,3) = dxdtheta;
-    F(1,4) = dxdv;
-    F(2,3) = dydtheta;
-    F(2,4) = dydv;
-    
-    body_new_Q = F*body_Q * F';
 end

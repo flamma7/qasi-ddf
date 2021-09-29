@@ -13,19 +13,14 @@ function [accel] = get_velocity_nav(state, target_point)
     delta_y = target_y - y;
 
     target_angle = atan2(delta_y, delta_x);
-    delta_angle = target_angle - theta;
-    while delta_angle > pi
-        delta_angle = delta_angle - 2*pi;
-    end
-    while delta_angle < -pi
-        delta_angle = delta_angle + 2*pi;
-    end
+    delta_angle = normalize_angle( target_angle - theta );
 
     TARGET_V = 0.3;
     DELTA_CHANGE = 0.1;
+    MAX_ANGLE_CHANGE = 0.2;
 
-    if abs(delta_angle) > 0.2
-        TARGET_THETA_DOT = 0.2 * sign(delta_angle);
+    if abs(delta_angle) > MAX_ANGLE_CHANGE
+        TARGET_THETA_DOT = MAX_ANGLE_CHANGE * sign(delta_angle);
     else
         TARGET_THETA_DOT = delta_angle;
     end
