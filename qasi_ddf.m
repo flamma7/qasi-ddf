@@ -129,10 +129,13 @@ while loop_num < NUM_LOOPS + 1
 
         %% TRACKING FILTER PREDICTION
         [x_hat, P] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, a);
-        [x_hat, P] = propagate(x_hat, P, NUM_AGENTS, q_perceived);
+        [x_hat, P] = propagate(x_hat, P, NUM_AGENTS, q_perceived*30);
         % TRACKING FILTER CORRECTION
+        % if mod(loop_num, 10) == 0
+        %     [x_hat, P] = filter_modem(x_hat, P, x_gt, w, w_perceived, BLUE_NUM, STATES, TRACK_STATES);
+        % end
         [x_hat, P] = filter_modem(x_hat, P, x_gt, w, w_perceived, BLUE_NUM, STATES, TRACK_STATES);
-        % [x_hat, P] = filter_sonar(x_hat, P, x_gt, w, w_perceived, NUM_AGENTS, STATES, PROB_DETECTION, SONAR_RANGE, a, x_nav);
+        [x_hat, P] = filter_sonar(x_hat, P, x_gt, w, w_perceived, NUM_AGENTS, STATES, PROB_DETECTION, SONAR_RANGE, a, x_nav);
 
         %% INTERSECT
         [x_nav, P_nav, x_hat, P] = intersect_estimates(x_nav, P_nav, x_hat, P, a, STATES);
@@ -149,7 +152,6 @@ while loop_num < NUM_LOOPS + 1
 
         track_error = get_error(x_gt, x_hat, NUM_AGENTS, STATES);
         x_hat_error_history(TRACK_STATES*(a-1)+1:TRACK_STATES*a, loop_num) = track_error;
-
     end
     loop_num = loop_num + 1;
 end

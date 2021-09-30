@@ -5,8 +5,8 @@ function [x_hat, P] = filter_modem(x_hat, P, x_gt, w, w_perceived, BLUE_NUM, STA
         start_gt = STATES*(b-1)+1;
 
         blue_truth_pos = x_gt(start_gt:start_gt+1,1);
-        range_meas = norm(blue_truth_pos);% + normrnd(0, w, 1, 1); % Modem located at 0,0,0
-        azimuth_meas = atan2(blue_truth_pos(2), blue_truth_pos(1));% + normrnd(0, w, 1, 1); % Facing 0 degrees
+        range_meas = norm(blue_truth_pos) + normrnd(0, w, 1, 1); % Modem located at 0,0,0
+        azimuth_meas = atan2(blue_truth_pos(2), blue_truth_pos(1))+ normrnd(0, w, 1, 1); % Facing 0 degrees
 
         startx = 4*(b-1)+1;
         blue_position = x_hat(startx:startx+1,1);
