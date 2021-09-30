@@ -13,7 +13,7 @@ close all; clear all; clc;
 rng(1);
 
 % Initialize
-BLUE_NUM = 3; % Blue agents come first in the state vector
+BLUE_NUM = 2; % Blue agents come first in the state vector
 RED_NUM = 0;
 NUM_AGENTS = BLUE_NUM + RED_NUM;
 STATES = 6; % Each agent has x,y,theta, x_vel,y_vel, theta_vel
@@ -54,7 +54,6 @@ for i =1:NUM_AGENTS % Initialize all velocities to zero
     x_gt(STATES*i,1) = 0;
 end
 x_gt = normalize_state(x_gt, NUM_AGENTS, STATES);
-x_gt
 x_gt_history = zeros(TOTAL_STATES, NUM_LOOPS); % x,y,theta,fwd, strafe, theta_dot
 
 % Initialize Navigation Filter Estimate
@@ -127,18 +126,20 @@ while loop_num < NUM_LOOPS + 1
         [x_nav, P_nav] = filter_dvl(x_nav, P_nav, x_gt, w, w_perceived, NUM_AGENTS, TOTAL_STATES, a); % DVL
         [x_nav, P_nav] = filter_gyro(x_nav, P_nav, x_gt, w, w_perceived, NUM_AGENTS, TOTAL_STATES, a); % Gyro
         [x_nav, P_nav] = filter_compass(x_nav, P_nav, x_gt, w, w_perceived, NUM_AGENTS, TOTAL_STATES, a); % Compass
-        [x_navs, P_navs] = set_estimate(x_navs, P_navs, STATES, x_nav, P_nav, a);
 
         %% TRACKING FILTER PREDICTION
         [x_hat, P] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, a);
         [x_hat, P] = propagate(x_hat, P, NUM_AGENTS, q_perceived);
         % TRACKING FILTER CORRECTION
         [x_hat, P] = filter_modem(x_hat, P, x_gt, w, w_perceived, BLUE_NUM, STATES, TRACK_STATES);
-        [x_hat, P] = filter_sonar(x_hat, P, x_gt, w, w_perceived, NUM_AGENTS, STATES, PROB_DETECTION, SONAR_RANGE, a, x_nav);
+        % [x_hat, P] = filter_sonar(x_hat, P, x_gt, w, w_perceived, NUM_AGENTS, STATES, PROB_DETECTION, SONAR_RANGE, a, x_nav);
 
         %% INTERSECT
+        [x_nav, P_nav, x_hat, P] = intersect_estimates(x_nav, P_nav, x_hat, P, a, STATES);
 
+        %% SAVE ESTIMATES
         [x_hats, Ps] = set_estimate(x_hats, Ps, 4, x_hat, P, a);
+        [x_navs, P_navs] = set_estimate(x_navs, P_navs, STATES, x_nav, P_nav, a);
 
         % Record history for plotting
         x_nav_history(STATES*(a-1)+1:STATES*a, loop_num) = x_nav;
@@ -160,10 +161,10 @@ ts2a(:, STATES*(AGENT_TO_PLOT-1)+1 : STATES*AGENT_TO_PLOT) = eye(STATES);
 error = ts2a * (x_gt_history - x_nav_history);
 error = normalize_state(error, 1, STATES);
 P_nav_history_agent = ts2a * P_nav_history;
-% plot_error_nav(error, P_nav_history, NUM_LOOPS, STATES, AGENT_TO_PLOT);
+plot_error_nav(error, P_nav_history, NUM_LOOPS, STATES, AGENT_TO_PLOT);
 %plot_norm_error(error);
 
-plot_error(x_hat_error_history, P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_AGENTS, AGENT_TO_PLOT);
+% plot_error(x_hat_error_history, P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_AGENTS, AGENT_TO_PLOT);
 
 % Make animation
 % make_animation_nav(STATES, NUM_AGENTS, MAP_DIM, NUM_LOOPS, x_gt_history, x_nav_history, P_nav_history);
