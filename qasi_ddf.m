@@ -133,6 +133,7 @@ while loop_num < NUM_LOOPS + 1
         [x_hat, P] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, a);
         [x_hat, P] = propagate(x_hat, P, NUM_AGENTS, q_perceived);
         % TRACKING FILTER CORRECTION
+        [x_hat, P] = filter_modem(x_hat, P, x_gt, w, w_perceived, BLUE_NUM, STATES, TRACK_STATES);
         % [x_hat, P] = filter_sonar(x_hat, P, x_gt, w, w_perceived, NUM_AGENTS, STATES, PROB_DETECTION, SONAR_RANGE, a, x_nav);
 
         %% INTERSECT
