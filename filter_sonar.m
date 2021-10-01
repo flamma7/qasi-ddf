@@ -46,7 +46,7 @@ function [x_hat, P] = filter_sonar(x_hat, P, x_gt, w, w_perceived_sonar_range, w
             dadx2 = -(y2 - y1) / norm(delta)^2;
             dady1 = -(x2 - x1) / norm(delta)^2;
             dady2 = (x2 - x1) / norm(delta)^2;
-            % dadt1 = -1; % Linear filter
+            % dadt1 = -1; % NonLinear filter
 
             % Construct range measurement update vector
             C = zeros(1, 4*NUM_AGENTS);
