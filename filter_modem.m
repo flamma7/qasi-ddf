@@ -29,9 +29,10 @@ function [x_hat, P] = filter_modem(x_hat, P, x_gt, w, w_perceived_modem_range,w_
         C(1, startx) = dadx;
         C(1, startx+1) = dady;
 
-        innovation = normalize_angle( azimuth_meas - pred_azimuth_meas )
+        innovation = normalize_angle( azimuth_meas - pred_azimuth_meas );
         if abs(innovation) > 1
-            pause
+            innovation
+            % pause
         end
 
         K = P * C' * inv(C * P * C' + w_perceived_modem_azimuth);
