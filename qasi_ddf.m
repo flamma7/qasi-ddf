@@ -14,7 +14,7 @@ close all; clear all; clc;
 
 % Initialize
 BLUE_NUM = 2; % Blue agents come first in the state vector
-RED_NUM = 0;
+RED_NUM = 1;
 NUM_AGENTS = BLUE_NUM + RED_NUM;
 STATES = 6; % Each agent has x,y,theta, x_vel,y_vel, theta_vel
 TRACK_STATES = 4 * NUM_AGENTS; % x,y,x_dot, y_dot for each agent
@@ -24,7 +24,7 @@ NUM_LOOPS = 500;
 TIME_DELTA = 1;
 MAP_DIM = 20;
 PROB_DETECTION = 1.0;
-SONAR_RANGE = 10.0;
+SONAR_RANGE = 20.0;
 
 AGENT_TO_PLOT = 1;
 assert( AGENT_TO_PLOT < BLUE_NUM + 1 )
