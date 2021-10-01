@@ -1,4 +1,4 @@
-function [x_hat, P] = filter_modem(x_hat, P, x_gt, w, w_perceived, BLUE_NUM, STATES, TRACK_STATES)
+function [x_hat, P] = filter_modem(x_hat, P, x_gt, w, w_perceived_modem_range,w_perceived_modem_azimuth, BLUE_NUM, STATES, TRACK_STATES)
 
     for b = 1:BLUE_NUM
 
@@ -24,22 +24,27 @@ function [x_hat, P] = filter_modem(x_hat, P, x_gt, w, w_perceived, BLUE_NUM, STA
         dadx = -y / norm(blue_position)^2;
         dady = x / norm(blue_position)^2;
 
-        % Construct range measurement update vector
-        C = zeros(1, TRACK_STATES);
-        C(1, startx) = drdx;
-        C(1, startx+1) = drdy;
-
-        K = P * C' * inv(C * P * C' + w_perceived);
-        x_hat = x_hat + K * (range_meas - pred_range_meas);
-        P = P - K*C*P;
-
         % Construct azimuth measurement update vector
         C = zeros(1, TRACK_STATES);
         C(1, startx) = dadx;
         C(1, startx+1) = dady;
 
-        K = P * C' * inv(C * P * C' + w_perceived);
-        x_hat = x_hat + K * (azimuth_meas - pred_azimuth_meas);
+        innovation = normalize_angle( azimuth_meas - pred_azimuth_meas )
+        if abs(innovation) > 1
+            pause
+        end
+
+        K = P * C' * inv(C * P * C' + w_perceived_modem_azimuth);
+        x_hat = x_hat + K * innovation;
+        P = P - K*C*P;
+
+        % Construct range measurement update vector
+        C = zeros(1, TRACK_STATES);
+        C(1, startx) = drdx;
+        C(1, startx+1) = drdy;
+
+        K = P * C' * inv(C * P * C' + w_perceived_modem_range);
+        x_hat = x_hat + K * (range_meas - pred_range_meas);
         P = P - K*C*P;
     end
 end

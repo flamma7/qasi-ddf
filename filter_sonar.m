@@ -1,4 +1,4 @@
-function [x_hat, P] = filter_sonar(x_hat, P, x_gt, w, w_perceived, NUM_AGENTS, STATES, prob_detection, sonar_dist, agent, x_nav)
+function [x_hat, P] = filter_sonar(x_hat, P, x_gt, w, w_perceived_sonar_range, w_perceived_sonar_azimuth, NUM_AGENTS, STATES, prob_detection, sonar_dist, agent, x_nav)
 
     TOTAL_STATES = STATES * NUM_AGENTS;
 
@@ -55,7 +55,7 @@ function [x_hat, P] = filter_sonar(x_hat, P, x_gt, w, w_perceived, NUM_AGENTS, S
             C(1, start_x1+1) = drdy1;
             C(1, start_x2+1) = drdy2;
 
-            K = P * C' * inv(C * P * C' + w_perceived);
+            K = P * C' * inv(C * P * C' + w_perceived_sonar_range);
             x_hat = x_hat + K * (rel_range_meas - pred_range);
             P = P - K*C*P;
 
@@ -65,10 +65,9 @@ function [x_hat, P] = filter_sonar(x_hat, P, x_gt, w, w_perceived, NUM_AGENTS, S
             C(1, start_x2) = dadx2;
             C(1, start_x1+1) = dady1;
             C(1, start_x2+1) = dady2;
-            % C(1, start_x1+2) = dadt1;
 
-            K = P * C' * inv(C * P * C' + w_perceived);
-            x_hat = x_hat + K * (rel_azimuth_meas - pred_azimuth);
+            K = P * C' * inv(C * P * C' + w_perceived_sonar_azimuth);
+            x_hat = x_hat + K * normalize_angle(rel_azimuth_meas - pred_azimuth);
             P = P - K*C*P;
         end
     end

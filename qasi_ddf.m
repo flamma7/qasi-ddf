@@ -10,7 +10,7 @@ close all; clear all; clc;
 % 7. Increase number of agents & duration
 % 8. Selective information sharing (compare w/ random sharing)
 
-rng(1);
+% rng(1);
 
 % Initialize
 BLUE_NUM = 2; % Blue agents come first in the state vector
@@ -24,7 +24,7 @@ NUM_LOOPS = 500;
 TIME_DELTA = 1;
 MAP_DIM = 20;
 PROB_DETECTION = 1.0;
-SONAR_RANGE = 20.0;
+SONAR_RANGE = 10.0;
 
 AGENT_TO_PLOT = 1;
 assert( AGENT_TO_PLOT < BLUE_NUM + 1 )
@@ -38,6 +38,16 @@ w_gps = 1.0; % std
 q_perceived = q*q;
 w_perceived = w*w;
 w_gps_perceived = w_gps*w_gps;
+
+%% I know q_perceived is good for navigation filter
+% My tuning parameters are process noise and measurement noise for the sonar and modem
+% Let's just tune with sonars for now
+q_perceived_tracking = 0.01;
+w_perceived_modem_range = 0.05;
+w_perceived_modem_azimuth = 0.05;
+
+w_perceived_sonar_range = 0.05;
+w_perceived_sonar_azimuth = 0.05;
 
 Q = eye(TOTAL_STATES);
 for i =1:NUM_AGENTS % No process noise to the velocity
@@ -91,7 +101,7 @@ while loop_num < NUM_LOOPS + 1
         delta = waypoints(2*(i-1)+1 : 2*i) - x_gt(STATES*(i-1)+1:STATES*(i-1)+2,1);
         if norm(delta) < 1
             waypoints(2*(i-1)+1 : 2*i) = randi(2*MAP_DIM, 2,1) - MAP_DIM;
-            disp('reached!');
+            % disp('reached!');
         end
         
     end
@@ -129,13 +139,13 @@ while loop_num < NUM_LOOPS + 1
 
         %% TRACKING FILTER PREDICTION
         [x_hat, P] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, a);
-        [x_hat, P] = propagate(x_hat, P, NUM_AGENTS, q_perceived*30);
+        [x_hat, P] = propagate(x_hat, P, NUM_AGENTS, q_perceived_tracking); % Scale the process noise to account for nonlinearities
         % TRACKING FILTER CORRECTION
-        % if mod(loop_num, 10) == 0
-        %     [x_hat, P] = filter_modem(x_hat, P, x_gt, w, w_perceived, BLUE_NUM, STATES, TRACK_STATES);
-        % end
-        [x_hat, P] = filter_modem(x_hat, P, x_gt, w, w_perceived, BLUE_NUM, STATES, TRACK_STATES);
-        [x_hat, P] = filter_sonar(x_hat, P, x_gt, w, w_perceived, NUM_AGENTS, STATES, PROB_DETECTION, SONAR_RANGE, a, x_nav);
+        if mod(loop_num, 10) == 0
+            [x_hat, P] = filter_modem(x_hat, P, x_gt, w, w_perceived_modem_range, w_perceived_modem_azimuth, BLUE_NUM, STATES, TRACK_STATES);
+        end
+        % [x_hat, P] = filter_modem(x_hat, P, x_gt, w, w_perceived, BLUE_NUM, STATES, TRACK_STATES);
+        [x_hat, P] = filter_sonar(x_hat, P, x_gt, w, w_perceived_sonar_range, w_perceived_sonar_azimuth, NUM_AGENTS, STATES, PROB_DETECTION, SONAR_RANGE, a, x_nav);
 
         %% INTERSECT
         [x_nav, P_nav, x_hat, P] = intersect_estimates(x_nav, P_nav, x_hat, P, a, STATES);
@@ -163,10 +173,10 @@ ts2a(:, STATES*(AGENT_TO_PLOT-1)+1 : STATES*AGENT_TO_PLOT) = eye(STATES);
 error = ts2a * (x_gt_history - x_nav_history);
 error = normalize_state(error, 1, STATES);
 P_nav_history_agent = ts2a * P_nav_history;
-plot_error_nav(error, P_nav_history, NUM_LOOPS, STATES, AGENT_TO_PLOT);
+% plot_error_nav(error, P_nav_history, NUM_LOOPS, STATES, AGENT_TO_PLOT);
 %plot_norm_error(error);
 
-% plot_error(x_hat_error_history, P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_AGENTS, AGENT_TO_PLOT);
+plot_error(x_hat_error_history, P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_AGENTS, AGENT_TO_PLOT);
 
 % Make animation
 % make_animation_nav(STATES, NUM_AGENTS, MAP_DIM, NUM_LOOPS, x_gt_history, x_nav_history, P_nav_history);
