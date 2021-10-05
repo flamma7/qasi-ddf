@@ -14,6 +14,7 @@ function [] = qasi_ddf(mc_run_num)
     if nargin < 1
         rng(0);
         close all; clear all; clc;
+        disp("Initializing with random seed 0");
         SAVE_FILE = false; 
     else
         SAVE_FILE = true;
@@ -36,8 +37,8 @@ function [] = qasi_ddf(mc_run_num)
     PROB_DETECTION = 1.0;
     SONAR_RANGE = 20.0;
 
-    DELTA_RANGE = 1.0;
-    DELTA_AZIMUTH = 0.1;
+    DELTA_RANGE = 0.0;
+    DELTA_AZIMUTH = 0.0;
 
     AGENT_TO_PLOT = 2;
     assert( AGENT_TO_PLOT < BLUE_NUM + 1 )
@@ -168,10 +169,9 @@ function [] = qasi_ddf(mc_run_num)
             [x_hat, P] = propagate(x_hat, P, NUM_AGENTS, q_perceived_tracking); % Scale the process noise to account for nonlinearities
             % TRACKING FILTER CORRECTION
             % [x_hat, P] = filter_sonar(x_hat, P, x_gt, w, w_perceived_sonar_range, w_perceived_sonar_azimuth, NUM_AGENTS, STATES, PROB_DETECTION, SONAR_RANGE, a, x_nav);
-            [x_hat, P, x_common, P_common, x_hats_, Ps_] = filter_sonar_et( ...
-                                                                        x_hat, P, x_gt, w, w_perceived_sonar_range, w_perceived_sonar_azimuth, ... 
-                                                                        NUM_AGENTS, STATES, PROB_DETECTION, SONAR_RANGE, a, x_nav, x_common_bar, ...
-                                                                        x_bars, P_bars, x_common, P_common, DELTA_RANGE, DELTA_AZIMUTH);
+            [x_hat, P, x_common, P_common, x_hats, Ps] = filter_sonar_et( x_hat, P, x_gt, w, w_perceived_sonar_range, w_perceived_sonar_azimuth, ... 
+                                                                            NUM_AGENTS, BLUE_NUM, STATES, PROB_DETECTION, SONAR_RANGE, a, x_nav, x_common_bar, ...
+                                                                            x_bars, P_bars, x_common, P_common, DELTA_RANGE, DELTA_AZIMUTH, x_hats, Ps);
             [x_hat, P] = modem_schedule(BLUE_NUM, NUM_AGENTS, loop_num, x_hat, P, x_hats, Ps, x_gt, w, w_perceived_modem_range, w_perceived_modem_azimuth, STATES, TRACK_STATES, a);
 
             %% INTERSECT TRACK & NAV FILTER

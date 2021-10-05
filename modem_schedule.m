@@ -21,7 +21,7 @@ function [x_hat, P] = modem_schedule(BLUE_NUM, NUM_AGENTS, loop_num, x_hat, P, x
                 continue
             elseif agent_share_times(b) == iter % This agent is sharing
                 [x_hat_b, P_b] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, b);
-                [x_hat, P] = covariance_intersect(x_hat, P, x_hat_b, P_b); % Intersect estimates
+                % [x_hat, P] = covariance_intersect(x_hat, P, x_hat_b, P_b); % Intersect estimates
                 
             end
         end

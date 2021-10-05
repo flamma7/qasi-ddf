@@ -1,11 +1,8 @@
-function [x_hat, P, x_common, P_common, x_hats, Ps] = filter_sonar_et(x_hat, P, x_gt, w, w_perceived_sonar_range, w_perceived_sonar_azimuth, NUM_AGENTS, STATES, prob_detection, sonar_dist, agent, x_nav, x_common_bar, x_bars, P_bars, x_common, P_common, delta_range, delta_azimuth)
+function [x_hat, P, x_common, P_common, x_hats, Ps] = filter_sonar_et(x_hat, P, x_gt, w, w_perceived_sonar_range, w_perceived_sonar_azimuth, NUM_AGENTS, BLUE_NUM, STATES, prob_detection, sonar_dist, agent, x_nav, x_common_bar, x_bars, P_bars, x_common, P_common, delta_range, delta_azimuth, x_hats, Ps)
 
     % Determine if there is a sonar measurement
     % Update the regular estimate
     % Share measurements with other agents implicit/explicit
-
-    x_hats = x_bars;
-    Ps = P_bars;
 
     TOTAL_STATES = STATES * NUM_AGENTS;
 
@@ -51,149 +48,68 @@ function [x_hat, P, x_common, P_common, x_hats, Ps] = filter_sonar_et(x_hat, P, 
             % TODO make the below function calls for organization / debugging?
 
             % RANGE COMMON ESTIMATE
-            % [pred_range, C] = predict_range(x_common, start_x1, start_x2); % TODO should this be x_common_bar??
-            % innovation_range = rel_range_meas - pred_range;
-            % if abs(innovation_range) > delta_range % Explicit
-            %     K = P_common * C' * inv(C * P_common * C' + w_perceived_sonar_range);
-            %     x_common = x_common + K * innovation_range;
-            %     P_common = P_common - K*C*P_common;
-            % else % Implicit
-            %     disp("Fusing range implicitly");
-            %     [x_hat, P] = implicit_fuse(x_bar, P_bar, x_hat, P, x_ref, C, R, delta, h_x_hat, h_x_bar, h_x_ref)
-                
-            %     x1 = x_common(start_x1,1); 
-            %     y1 = x_common(start_x1+1,1);
-            %     x2 = x_common(start_x2,1);
-            %     y2 = x_common(start_x2+1,1);
-            %     delta_pred = [x2 - x1; y2 - y1];
-            %     pred_range = norm(delta_pred);
+            [pred_range, C] = predict_range(x_common, start_x1, start_x2); % TODO should this be x_common_bar??
+            innovation_range_common = rel_range_meas - pred_range;
+            if abs(innovation_range_common) > delta_range % Explicit
+                K = P_common * C' * inv(C * P_common * C' + w_perceived_sonar_range);
+                x_common = x_common + K * innovation_range_common;
+                P_common = P_common - K*C*P_common;
+            else % Implicit
+                disp("Fusing range implicitly");
+                h_x_hat = pred_range;
+                [h_x_bar, C_] = predict_range(x_common_bar, start_x1, start_x2);
+                h_x_ref = h_x_bar;
+                [x_common, P_common] = implicit_fuse(x_common_bar, P_common_bar, x_common, P_common, x_common_bar, C, w_perceived_sonar_range, delta_range, h_x_hat, h_x_bar, h_x_ref, false);
+            end
+            % AZIMUTH COMMON ESTIMATE
+            [pred_azimuth, C] = predict_azimuth(x_common, start_x1, start_x2); % TODO should this be x_common_bar??
+            innovation_azimuth_common = normalize_angle( rel_azimuth_meas - pred_azimuth );
+            if abs(innovation_azimuth_common) > delta_azimuth % Explicit
+                K = P_common * C' * inv(C * P_common * C' + w_perceived_sonar_azimuth);
+                x_common = x_common + K * innovation_azimuth_common;
+                P_common = P_common - K*C*P_common;
+            else % Implicit
+                disp("Fusing azimuth implicitly");
+                h_x_hat = pred_azimuth;
+                [h_x_bar, C_] = predict_azimuth(x_common_bar, start_x1, start_x2);
+                h_x_ref = h_x_bar;
+                [x_common, P_common] = implicit_fuse(x_common_bar, P_common_bar, x_common, P_common, x_common_bar, C, w_perceived_sonar_azimuth, delta_azimuth, h_x_hat, h_x_bar, h_x_ref, true);
+            end
 
-            %     mu = pred_range - pred_range_bar;
-            %     Qe = C * P_common_bar * C' + w_perceived_sonar_range;
-            %     alpha = pred_range_bar - pred_range_bar; % Should always be zero
+            %%%%%%%%%%%%%%%%%%%
+            %% ET SHARING %%
+            %%%%%%%%%%%%%%%%%%%
 
-            %     Qf = @(x) 1 - normcdf(x);
+            % Fuse with local estimates at other agents
+            for a2 = 1:BLUE_NUM
+                if a2 == agent
+                    continue
+                end
 
-            %     nu_minus = (-delta_range + alpha - mu) / sqrt(Qe);
-            %     nu_plus = (delta_range + alpha - mu) / sqrt(Qe);
-            %     tmp = (normpdf(nu_minus) - normpdf(nu_plus)) / (Qf(nu_minus) - Qf(nu_plus));
-            %     z_bar = tmp * sqrt(Qe);
-            %     tmp2 = (nu_minus * normpdf(nu_minus) - nu_plus*normpdf(nu_plus)) / (Qf(nu_minus) - Qf(nu_plus));
-            %     curly_theta = tmp^2 - tmp2
-            %     K = P_common * C' * inv( C * P_common * C' + w_perceived_sonar_range);
-            %     x_common = x_common + K * z_bar;
-            %     P_common = P_common - curly_theta * K * P_common;
-            % end
-            
-            % % AZIMUTH MEASUREMENT
-            % x1 = x_common_bar(start_x1,1); % let's use x_common_bar
-            % y1 = x_common_bar(start_x1+1,1);
-            % x2 = x_common_bar(start_x2,1);
-            % y2 = x_common_bar(start_x2+1,1);
-            % delta_pred = [x2 - x1; y2 - y1];
-            % pred_azimuth_bar = atan2(delta_pred(2), delta_pred(1));
+                % "agent" is sharing wth "a2"
+                [x_hat_a2, P_a2] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, a2);
+                if abs(innovation_range_common) > delta_range
+                    [pred_range, C] = predict_range(x_hat_a2, start_x1, start_x2);
+                    innovation = rel_range_meas - pred_range;
+                    K = P_a2 * C' * inv(C * P_a2 * C' + w_perceived_sonar_range);
+                    x_hat_a2 = x_hat_a2 + K * innovation;
+                    P_a2 = P_a2 - K*C*P_a2;
+                else
+                    disp("Fusing Range Implicitly..");
+                end
 
-            % dadx1 = (y2 - y1) / norm(delta_pred)^2;
-            % dadx2 = -(y2 - y1) / norm(delta_pred)^2;
-            % dady1 = -(x2 - x1) / norm(delta_pred)^2;
-            % dady2 = (x2 - x1) / norm(delta_pred)^2;
-            % C = zeros(1, 4*NUM_AGENTS);
-            % C(1, start_x1) = dadx1;
-            % C(1, start_x2) = dadx2;
-            % C(1, start_x1+1) = dady1;
-            % C(1, start_x2+1) = dady2;
-            
-            % % RANGE COMMON ESTIMATE
-            % innovation_azimuth = normalize_angle( rel_azimuth_meas - pred_azimuth_bar );
+                if abs(innovation_azimuth_common) > delta_azimuth
+                    [pred_azimuth, C] = predict_azimuth(x_hat_a2, start_x1, start_x2);
+                    innovation = normalize_angle( rel_azimuth_meas - pred_azimuth );
+                    K = P_a2 * C' * inv(C * P_a2 * C' + w_perceived_sonar_azimuth);
+                    x_hat_a2 = x_hat_a2 + K * innovation;
+                    P_a2 = P_a2 - K*C*P_a2;
+                else
+                    disp("Fusing Azimuth Implicitly..");
+                end
 
-            % if abs(innovation_azimuth) > delta_azimuth % Explicit
-            %     K = P_common * C' * inv(C * P_common * C' + w_perceived_sonar_azimuth);
-            %     x_common = x_common + K * innovation_azimuth;
-            %     P_common = P_common - K*C*P_common;
-            % else % Implicit
-            %     disp("Fusing azimuth implicitly");
-            %     x1 = x_common(start_x1,1);
-            %     y1 = x_common(start_x1+1,1);
-            %     x2 = x_common(start_x2,1);
-            %     y2 = x_common(start_x2+1,1);
-            %     delta_pred = [x2 - x1; y2 - y1];
-            %     pred_azimuth = atan2(delta_pred(2), delta_pred(1))
-
-            %     mu = normalize_angle( pred_azimuth - pred_azimuth_bar );
-            %     Qe = C * P_common_bar * C' + w_perceived_sonar_azimuth;
-            %     alpha = pred_azimuth_bar - pred_azimuth_bar; % Should always be zero
-
-            %     Qf = @(x) 1 - normcdf(x);
-
-            %     nu_minus = normalize_angle(-delta_azimuth + alpha - mu) / sqrt(Qe);
-            %     nu_plus = normalize_angle(delta_azimuth + alpha - mu) / sqrt(Qe);
-            %     tmp = (normpdf(nu_minus) - normpdf(nu_plus)) / (Qf(nu_minus) - Qf(nu_plus));
-            %     z_bar = tmp * sqrt(Qe);
-            %     tmp2 = (nu_minus * normpdf(nu_minus) - nu_plus*normpdf(nu_plus)) / (Qf(nu_minus) - Qf(nu_plus));
-            %     curly_theta = tmp^2 - tmp2
-            %     K = P_common * C' * inv( C * P_common * C' + w_perceived_sonar_azimuth);
-            %     x_common = x_common + K * z_bar;
-            %     P_common = P_common - curly_theta * K * P_common;
-            % end
-
-            % % Fuse with local estimates at other agents
-            % for a2 = 1:BLUE_NUM
-            %     if a2 == agent
-            %         continue
-            %     end
-
-            %     [x_bar, P_bar] = get_estimate(x_bars, P_bars, 4, NUM_AGENTS, a2);
-
-            %     % RANGE
-            %     x1 = x_bar(start_x1,1); % let's use x_common_bar
-            %     y1 = x_bar(start_x1+1,1);
-            %     x2 = x_bar(start_x2,1);
-            %     y2 = x_bar(start_x2+1,1);
-            %     delta_pred = [x2 - x1; y2 - y1];
-            %     pred_range_bar = norm(delta_pred);
-            %     drdx1 = (x1 - x2) / norm(delta_pred);
-            %     drdx2 = (x2 - x1) / norm(delta_pred);
-            %     drdy1 = (y1 - y2) / norm(delta_pred);
-            %     drdy2 = (y2 - y1) / norm(delta_pred);
-            %     C = zeros(1, 4*NUM_AGENTS);
-            %     C(1, start_x1) = drdx1;
-            %     C(1, start_x2) = drdx2;
-            %     C(1, start_x1+1) = drdy1;
-            %     C(1, start_x2+1) = drdy2;
-
-            %     if abs(innovation_range) > delta_range % Explicit
-            %         K = P_bar * C' * inv(C * P_bar * C' + w_perceived_sonar_range);
-            %         x_common = x_common + K * innovation_range;
-            %         P_bar = P_bar - K*C*P_bar;
-            %     else % Implicit
-            %         disp("Fusing range implicitly");
-            %         x1 = x_common(start_x1,1); 
-            %         y1 = x_common(start_x1+1,1);
-            %         x2 = x_common(start_x2,1);
-            %         y2 = x_common(start_x2+1,1);
-            %         delta_pred = [x2 - x1; y2 - y1];
-            %         pred_range = norm(delta_pred);
-    
-            %         mu = pred_range - pred_range_bar;
-            %         Qe = C * P_bar_bar * C' + w_perceived_sonar_range;
-            %         alpha = pred_range_bar - pred_range_bar; % Should always be zero
-    
-            %         Qf = @(x) 1 - normcdf(x);
-    
-            %         nu_minus = (-delta_range + alpha - mu) / sqrt(Qe);
-            %         nu_plus = (delta_range + alpha - mu) / sqrt(Qe);
-            %         tmp = (normpdf(nu_minus) - normpdf(nu_plus)) / (Qf(nu_minus) - Qf(nu_plus));
-            %         z_bar = tmp * sqrt(Qe);
-            %         tmp2 = (nu_minus * normpdf(nu_minus) - nu_plus*normpdf(nu_plus)) / (Qf(nu_minus) - Qf(nu_plus));
-            %         curly_theta = tmp^2 - tmp2
-            %         K = P_bar * C' * inv( C * P_bar * C' + w_perceived_sonar_range);
-            %         x_common = x_common + K * z_bar;
-            %         P_bar = P_bar - curly_theta * K * P_bar;
-            %     end
-
-
-            %     % AZIMUTH
-            % end
+                [x_hats, Ps] = set_estimate(x_hats, Ps, 4, x_hat_a2, P_a2, a2);
+            end
         end
     end
 end
