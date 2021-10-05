@@ -12,7 +12,7 @@ function [] = qasi_ddf(mc_run_num)
     % 8. Selective information sharing (compare w/ random sharing)
 
     if nargin < 1
-        rng(0);
+        rng(1);
         close all; clear all; clc;
         disp("Initializing with random seed 0");
         SAVE_FILE = false; 
@@ -31,13 +31,13 @@ function [] = qasi_ddf(mc_run_num)
     TRACK_STATES = 4 * NUM_AGENTS; % x,y,x_dot, y_dot for each agent
     TOTAL_STATES = STATES * NUM_AGENTS; 
     TOTAL_TRACK_STATES = TRACK_STATES * BLUE_NUM;
-    NUM_LOOPS = 500;
+    NUM_LOOPS = 1000; %269
     TIME_DELTA = 1;
     MAP_DIM = 20; % Square with side length
     PROB_DETECTION = 1.0;
     SONAR_RANGE = 20.0;
 
-    DELTA_RANGE = 0.05;
+    DELTA_RANGE = 0.5;
     DELTA_AZIMUTH = 0.1;
     num_implicit = 0;
     num_explicit = 0;
@@ -176,8 +176,10 @@ function [] = qasi_ddf(mc_run_num)
                                                                             NUM_AGENTS, BLUE_NUM, STATES, PROB_DETECTION, SONAR_RANGE, a, x_nav, x_common_bar, ...
                                                                             P_common_bar, x_bars, P_bars, x_common, P_common, DELTA_RANGE, DELTA_AZIMUTH, ...
                                                                             x_hats, Ps, num_implicit, num_explicit);
-            [x_hat, P] = modem_schedule(BLUE_NUM, NUM_AGENTS, loop_num, x_hat, P, x_hats, Ps, x_gt, w, w_perceived_modem_range, w_perceived_modem_azimuth, STATES, TRACK_STATES, a);
-
+            [x_hat, P, x_common, P_common] = modem_schedule( ...
+                                            BLUE_NUM, NUM_AGENTS, loop_num, x_hat, P, x_hats, Ps, x_gt, w, ...
+                                            w_perceived_modem_range, w_perceived_modem_azimuth, STATES, ...
+                                            TRACK_STATES, a, x_common, P_common);
             %% INTERSECT TRACK & NAV FILTER
             [x_nav, P_nav, x_hat, P] = intersect_estimates(x_nav, P_nav, x_hat, P, a, STATES);
 
@@ -207,7 +209,7 @@ function [] = qasi_ddf(mc_run_num)
     % plot_error_nav(error, P_nav_history, NUM_LOOPS, STATES, AGENT_TO_PLOT);
     %plot_norm_error(error);
 
-    plot_error(x_hat_error_history, P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_AGENTS, AGENT_TO_PLOT);
+    % plot_error(x_hat_error_history, P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_AGENTS, AGENT_TO_PLOT);
 
     % Make animation
     % make_animation_nav(STATES, NUM_AGENTS, MAP_DIM, NUM_LOOPS, x_gt_history, x_nav_history, P_nav_history);

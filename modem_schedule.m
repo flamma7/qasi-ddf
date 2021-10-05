@@ -1,4 +1,4 @@
-function [x_hat, P] = modem_schedule(BLUE_NUM, NUM_AGENTS, loop_num, x_hat, P, x_hats, Ps, x_gt, w, w_perceived_modem_range, w_perceived_modem_azimuth, STATES, TRACK_STATES, agent)
+function [x_hat, P, x_common, P_common] = modem_schedule(BLUE_NUM, NUM_AGENTS, loop_num, x_hat, P, x_hats, Ps, x_gt, w, w_perceived_modem_range, w_perceived_modem_azimuth, STATES, TRACK_STATES, agent, x_common, P_common)
 
     ping_delay = 3;
     broadcast_delay = 4;
@@ -14,6 +14,7 @@ function [x_hat, P] = modem_schedule(BLUE_NUM, NUM_AGENTS, loop_num, x_hat, P, x
     % Surface broadcasts modem measurements
     if iter == ping_time
         [x_hat, P] = filter_modem(x_hat, P, x_gt, w, w_perceived_modem_range, w_perceived_modem_azimuth, BLUE_NUM, STATES, TRACK_STATES);
+        [x_common, P_common] = filter_modem(x_common, P_common, x_gt, w, w_perceived_modem_range, w_perceived_modem_azimuth, BLUE_NUM, STATES, TRACK_STATES);
     else % Check if an agent is sharing
         for b = 1:BLUE_NUM
             % When agent shares fuse with the other agents, not this one

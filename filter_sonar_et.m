@@ -54,11 +54,13 @@ function [x_hat, P, x_common, P_common, x_hats, Ps, num_implicit, num_explicit] 
                 K = P_common * C' * inv(C * P_common * C' + w_perceived_sonar_range);
                 x_common = x_common + K * innovation_range_common;
                 P_common = P_common - K*C*P_common;
+                rank(P_common);
             else % Implicit
                 h_x_hat = pred_range;
                 [h_x_bar, C_] = predict_range(x_common_bar, start_x1, start_x2);
                 h_x_ref = h_x_bar;
                 [x_common, P_common] = implicit_fuse(x_common_bar, P_common_bar, x_common, P_common, x_common_bar, C, w_perceived_sonar_range, delta_range, h_x_hat, h_x_bar, h_x_ref, false);
+                rank(P_common);
             end
             % AZIMUTH COMMON ESTIMATE
             [pred_azimuth, C] = predict_azimuth(x_common, start_x1, start_x2); % TODO should this be x_common_bar??
@@ -67,11 +69,13 @@ function [x_hat, P, x_common, P_common, x_hats, Ps, num_implicit, num_explicit] 
                 K = P_common * C' * inv(C * P_common * C' + w_perceived_sonar_azimuth);
                 x_common = x_common + K * innovation_azimuth_common;
                 P_common = P_common - K*C*P_common;
+                rank(P_common);
             else % Implicit
                 h_x_hat = pred_azimuth;
                 [h_x_bar, C_] = predict_azimuth(x_common_bar, start_x1, start_x2);
                 h_x_ref = h_x_bar;
                 [x_common, P_common] = implicit_fuse(x_common_bar, P_common_bar, x_common, P_common, x_common_bar, C, w_perceived_sonar_azimuth, delta_azimuth, h_x_hat, h_x_bar, h_x_ref, true);
+                rank(P_common);
             end
 
             %%%%%%%%%%%%%%%%%%%
@@ -92,19 +96,33 @@ function [x_hat, P, x_common, P_common, x_hats, Ps, num_implicit, num_explicit] 
                     K = P_a2 * C' * inv(C * P_a2 * C' + w_perceived_sonar_range);
                     x_hat_a2 = x_hat_a2 + K * innovation;
                     P_a2 = P_a2 - K*C*P_a2;
+                    rank(P_a2);
 
                     num_explicit = num_explicit + 1;
                 else
                     % x_bar, P_bar, x_hat, P, x_ref, C, R, delta, h_x_hat, h_x_bar, h_x_ref, angle_meas
-                    disp("Fusing Range Implicitly");
+                    % disp("Fusing Range Implicitly");
                     [x_bar_a2, P_bar_a2] = get_estimate(x_bars, P_bars, 4, NUM_AGENTS, a2);
-                    x_ref = x_common_bar;
+                    % x_ref = x_common_bar;
+                    x_ref = x_common;
                     R = w_perceived_sonar_range;
                     h_x_hat = pred_range;
                     [h_x_bar, C_] = predict_range(x_bar_a2, start_x1, start_x2);
                     [h_x_ref, C_] = predict_range(x_ref, start_x1, start_x2);
                     angle_meas = false;
                     [x_hat_a2, P_a2] = implicit_fuse(x_bar_a2, P_bar_a2, x_hat_a2, P_a2, x_ref, C, R, delta_range, h_x_hat, h_x_bar, h_x_ref, angle_meas);
+                    if sum(isnan(P_a2)) > 0
+                        x_gt
+                        x_ref
+                        x_bar_a2
+                        x_hat_a2
+                        P_bar_a2
+                        P_a2
+                        h_x_hat
+                        h_x_bar
+                        h_x_ref
+                    end
+                    rank(P_a2);
 
                     num_implicit = num_implicit + 1;
                 end
@@ -115,18 +133,21 @@ function [x_hat, P, x_common, P_common, x_hats, Ps, num_implicit, num_explicit] 
                     K = P_a2 * C' * inv(C * P_a2 * C' + w_perceived_sonar_azimuth);
                     x_hat_a2 = x_hat_a2 + K * innovation;
                     P_a2 = P_a2 - K*C*P_a2;
+                    rank(P_a2);
 
                     num_explicit = num_explicit + 1;
                 else
                     % disp("Fusing Azimuth Implicitly");
                     [x_bar_a2, P_bar_a2] = get_estimate(x_bars, P_bars, 4, NUM_AGENTS, a2);
-                    x_ref = x_common_bar;
+                    % x_ref = x_common_bar;
+                    x_ref = x_common;
                     R = w_perceived_sonar_azimuth;
                     h_x_hat = pred_azimuth;
                     [h_x_bar, C_] = predict_azimuth(x_bar_a2, start_x1, start_x2);
                     [h_x_ref, C_] = predict_azimuth(x_ref, start_x1, start_x2);
                     angle_meas = true;
                     [x_hat_a2, P_a2] = implicit_fuse(x_bar_a2, P_bar_a2, x_hat_a2, P_a2, x_ref, C, R, delta_range, h_x_hat, h_x_bar, h_x_ref, angle_meas);
+                    rank(P_a2);
 
                     num_implicit = num_implicit + 1;
                 end
