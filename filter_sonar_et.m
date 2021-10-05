@@ -1,4 +1,4 @@
-function [x_hat, P, x_common, P_common, x_hats, Ps] = filter_sonar_et(x_hat, P, x_gt, w, w_perceived_sonar_range, w_perceived_sonar_azimuth, NUM_AGENTS, BLUE_NUM, STATES, prob_detection, sonar_dist, agent, x_nav, x_common_bar, x_bars, P_bars, x_common, P_common, delta_range, delta_azimuth, x_hats, Ps)
+function [x_hat, P, x_common, P_common, x_hats, Ps, num_implicit, num_explicit] = filter_sonar_et(x_hat, P, x_gt, w, w_perceived_sonar_range, w_perceived_sonar_azimuth, NUM_AGENTS, BLUE_NUM, STATES, prob_detection, sonar_dist, agent, x_nav, x_common_bar, x_bars, P_bars, x_common, P_common, delta_range, delta_azimuth, x_hats, Ps, num_implicit, num_explicit)
 
     % Determine if there is a sonar measurement
     % Update the regular estimate
@@ -94,8 +94,12 @@ function [x_hat, P, x_common, P_common, x_hats, Ps] = filter_sonar_et(x_hat, P, 
                     K = P_a2 * C' * inv(C * P_a2 * C' + w_perceived_sonar_range);
                     x_hat_a2 = x_hat_a2 + K * innovation;
                     P_a2 = P_a2 - K*C*P_a2;
+
+                    num_explicit = num_explicit + 1;
                 else
                     disp("Fusing Range Implicitly..");
+
+                    num_implicit = num_implicit + 1;
                 end
 
                 if abs(innovation_azimuth_common) > delta_azimuth
@@ -104,8 +108,12 @@ function [x_hat, P, x_common, P_common, x_hats, Ps] = filter_sonar_et(x_hat, P, 
                     K = P_a2 * C' * inv(C * P_a2 * C' + w_perceived_sonar_azimuth);
                     x_hat_a2 = x_hat_a2 + K * innovation;
                     P_a2 = P_a2 - K*C*P_a2;
+
+                    num_explicit = num_explicit + 1;
                 else
                     disp("Fusing Azimuth Implicitly..");
+                    
+                    num_implicit = num_implicit + 1;
                 end
 
                 [x_hats, Ps] = set_estimate(x_hats, Ps, 4, x_hat_a2, P_a2, a2);
