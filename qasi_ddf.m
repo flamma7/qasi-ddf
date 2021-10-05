@@ -32,9 +32,12 @@ function [] = qasi_ddf(mc_run_num)
     TOTAL_TRACK_STATES = TRACK_STATES * BLUE_NUM;
     NUM_LOOPS = 500;
     TIME_DELTA = 1;
-    MAP_DIM = 20;
+    MAP_DIM = 20; % Square with side length
     PROB_DETECTION = 1.0;
     SONAR_RANGE = 20.0;
+
+    DELTA_RANGE = 1.0;
+    DELTA_AZIMUTH = 0.1;
 
     AGENT_TO_PLOT = 2;
     assert( AGENT_TO_PLOT < BLUE_NUM + 1 )
@@ -86,6 +89,7 @@ function [] = qasi_ddf(mc_run_num)
 
     % I should create a block diagonal matrix to get initial positions from x_gt
     [x_hats, Ps] = initialize_x_hats(x_gt, P, NUM_AGENTS, STATES, BLUE_NUM);
+    [x_common, P_common] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, 1); % copy the initial estimate
 
     x_nav_history = zeros(size(x_gt_history));
     P_nav_history = zeros(TOTAL_STATES, STATES*NUM_LOOPS);
@@ -132,6 +136,18 @@ function [] = qasi_ddf(mc_run_num)
         x_gt = normalize_state(x_gt, NUM_AGENTS, STATES);
         x_gt_history(:,loop_num) = x_gt;
 
+        % Initialize data for implicit updates
+        x_bars = zeros(size(x_hats));
+        P_bars = zeros(size(Ps));
+        for a = 1:BLUE_NUM
+            [x_bar, P_bar] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, a);
+            [x_bar, P_bar] = propagate(x_bar, P_bar, NUM_AGENTS, q_perceived_tracking);
+            [x_bars, P_bars] = set_estimate(x_bars, P_bars, 4, x_bar, P_bar, a);
+        end
+        [x_common_bar, P_common_bar] = propagate(x_common, P_common, NUM_AGENTS, q_perceived_tracking);
+        x_common = x_common_bar;
+        P_common = P_common_bar;
+
         for a = 1:BLUE_NUM
 
             %% NAVIGATION FILTER PREDICTION
@@ -151,7 +167,11 @@ function [] = qasi_ddf(mc_run_num)
             [x_hat, P] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, a);
             [x_hat, P] = propagate(x_hat, P, NUM_AGENTS, q_perceived_tracking); % Scale the process noise to account for nonlinearities
             % TRACKING FILTER CORRECTION
-            [x_hat, P] = filter_sonar(x_hat, P, x_gt, w, w_perceived_sonar_range, w_perceived_sonar_azimuth, NUM_AGENTS, STATES, PROB_DETECTION, SONAR_RANGE, a, x_nav);
+            % [x_hat, P] = filter_sonar(x_hat, P, x_gt, w, w_perceived_sonar_range, w_perceived_sonar_azimuth, NUM_AGENTS, STATES, PROB_DETECTION, SONAR_RANGE, a, x_nav);
+            [x_hat, P, x_common, P_common, x_hats_, Ps_] = filter_sonar_et( ...
+                                                                        x_hat, P, x_gt, w, w_perceived_sonar_range, w_perceived_sonar_azimuth, ... 
+                                                                        NUM_AGENTS, STATES, PROB_DETECTION, SONAR_RANGE, a, x_nav, x_common_bar, ...
+                                                                        x_bars, P_bars, x_common, P_common, DELTA_RANGE, DELTA_AZIMUTH);
             [x_hat, P] = modem_schedule(BLUE_NUM, NUM_AGENTS, loop_num, x_hat, P, x_hats, Ps, x_gt, w, w_perceived_modem_range, w_perceived_modem_azimuth, STATES, TRACK_STATES, a);
 
             %% INTERSECT TRACK & NAV FILTER
@@ -183,7 +203,7 @@ function [] = qasi_ddf(mc_run_num)
     % plot_error_nav(error, P_nav_history, NUM_LOOPS, STATES, AGENT_TO_PLOT);
     %plot_norm_error(error);
 
-    % plot_error(x_hat_error_history, P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_AGENTS, AGENT_TO_PLOT);
+    plot_error(x_hat_error_history, P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_AGENTS, AGENT_TO_PLOT);
 
     % Make animation
     % make_animation_nav(STATES, NUM_AGENTS, MAP_DIM, NUM_LOOPS, x_gt_history, x_nav_history, P_nav_history);
