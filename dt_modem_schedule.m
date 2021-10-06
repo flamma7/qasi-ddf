@@ -1,4 +1,8 @@
-function [x_hat, P, x_common, P_common, ledger] = dt_modem_schedule(BLUE_NUM, NUM_AGENTS, loop_num, x_hat, P, x_hats, Ps, x_gt, w, w_perceived_modem_range, w_perceived_modem_azimuth, STATES, TRACK_STATES, agent, x_common, P_common, ledger)
+function [x_hat, P, x_common, P_common, ledger] = dt_modem_schedule(...
+                        BLUE_NUM, NUM_AGENTS, loop_num, x_hat, P, x_hats, Ps, x_gt, w, w_perceived_modem_range, ...
+                        w_perceived_modem_azimuth, w_perceived_sonar_range, w_perceived_sonar_azimuth, ...
+                        q_perceived_tracking, STATES, TRACK_STATES, agent, x_common, P_common, ledger, last_share_index,...
+                        delta_range, delta_azimuth, max_num_meas)
 
     ping_delay = 3;
     broadcast_delay = 4;
@@ -20,7 +24,17 @@ function [x_hat, P, x_common, P_common, ledger] = dt_modem_schedule(BLUE_NUM, NU
             if b == agent
                 continue
             elseif agent_share_times(b) == iter % This agent is sharing
-                [x_hat_b, P_b] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, b);
+                [x_common_debug, P_common_debug, mult, share_buffer] = pull_buffer( ...
+                                        last_share_index, loop_num, x_common, P_common, ledger, delta_range, delta_azimuth, ...
+                                        max_num_meas, agent, q_perceived_tracking, w_perceived_modem_range, ...
+                                        w_perceived_modem_azimuth, w_perceived_sonar_range, w_perceived_sonar_azimuth, NUM_AGENTS);
+
+                share_buffer
+                mult
+                assert(0);
+
+                % Share buffer with each agent
+
                 % [x_hat, P] = covariance_intersect(x_hat, P, x_hat_b, P_b); % Intersect estimates
                 
             end
