@@ -6,7 +6,7 @@ function [ledger] = add_meas(ledger, agent, type, index, start_x1, start_x2, dat
     % Measurement vector
     meas_columns = ["type", "index", "start_x1", "start_x2", "data"];
 
-    types = ["modem_range", "modem_azimuth", "sonar_range", "sonar_azimuth"];
+    types = ["modem_range", "modem_azimuth", "sonar_range", "sonar_azimuth", "sonar_range_implicit", "sonar_azimuth_implicit"];
     type_num = find(types == type); % Returns the index of the measurement
     if length(type_num) < 1
         disp("Could not locate meas type: " + type);
