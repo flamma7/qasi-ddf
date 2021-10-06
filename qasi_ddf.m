@@ -31,11 +31,10 @@ function [] = qasi_ddf(mc_run_num)
     TRACK_STATES = 4 * NUM_AGENTS; % x,y,x_dot, y_dot for each agent
     TOTAL_STATES = STATES * NUM_AGENTS; 
     TOTAL_TRACK_STATES = TRACK_STATES * BLUE_NUM;
-    NUM_LOOPS = 1000; %269
-    TIME_DELTA = 1;
+    NUM_LOOPS = 20;
     MAP_DIM = 20; % Square with side length
     PROB_DETECTION = 1.0;
-    SONAR_RANGE = 20.0;
+    SONAR_RANGE = 10.0;
 
     DELTA_RANGE = 0.5;
     DELTA_AZIMUTH = 0.1;
@@ -94,6 +93,13 @@ function [] = qasi_ddf(mc_run_num)
     [x_hats, Ps] = initialize_x_hats(x_gt, P, NUM_AGENTS, STATES, BLUE_NUM);
     [x_common, P_common] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, 1); % copy the initial estimate
 
+    % DeltaTier
+    last_x_hats = x_hats;
+    last_Ps = Ps;
+    last_index = 1;
+    meas_columns = ["type", "index", "start_x1", "start_x2", "data"];
+    ledger = zeros(3000, length(meas_columns) * BLUE_NUM);
+
     x_nav_history = zeros(size(x_gt_history));
     P_nav_history = zeros(TOTAL_STATES, STATES*NUM_LOOPS);
     x_hat_error_history = zeros(TOTAL_TRACK_STATES, NUM_LOOPS);
@@ -140,16 +146,16 @@ function [] = qasi_ddf(mc_run_num)
         x_gt_history(:,loop_num) = x_gt;
 
         % Initialize data for implicit updates
-        x_bars = zeros(size(x_hats));
-        P_bars = zeros(size(Ps));
-        for a = 1:BLUE_NUM
-            [x_bar, P_bar] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, a);
-            [x_bar, P_bar] = propagate(x_bar, P_bar, NUM_AGENTS, q_perceived_tracking);
-            [x_bars, P_bars] = set_estimate(x_bars, P_bars, 4, x_bar, P_bar, a);
-        end
-        [x_common_bar, P_common_bar] = propagate(x_common, P_common, NUM_AGENTS, q_perceived_tracking);
-        x_common = x_common_bar;
-        P_common = P_common_bar;
+        % x_bars = zeros(size(x_hats));
+        % P_bars = zeros(size(Ps));
+        % for a = 1:BLUE_NUM
+        %     [x_bar, P_bar] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, a);
+        %     [x_bar, P_bar] = propagate(x_bar, P_bar, NUM_AGENTS, q_perceived_tracking);
+        %     [x_bars, P_bars] = set_estimate(x_bars, P_bars, 4, x_bar, P_bar, a);
+        % end
+        % [x_common_bar, P_common_bar] = propagate(x_common, P_common, NUM_AGENTS, q_perceived_tracking);
+        % x_common = x_common_bar;
+        % P_common = P_common_bar;
 
         for a = 1:BLUE_NUM
 
@@ -170,16 +176,16 @@ function [] = qasi_ddf(mc_run_num)
             [x_hat, P] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, a);
             [x_hat, P] = propagate(x_hat, P, NUM_AGENTS, q_perceived_tracking); % Scale the process noise to account for nonlinearities
             % TRACKING FILTER CORRECTION
-            % [x_hat, P] = filter_sonar(x_hat, P, x_gt, w, w_perceived_sonar_range, w_perceived_sonar_azimuth, NUM_AGENTS, STATES, PROB_DETECTION, SONAR_RANGE, a, x_nav);
-            [x_hat, P, x_common, P_common, x_hats, Ps, num_implicit, num_explicit] = filter_sonar_et(  ...
-                                                                            x_hat, P, x_gt, w, w_perceived_sonar_range, w_perceived_sonar_azimuth, ... 
-                                                                            NUM_AGENTS, BLUE_NUM, STATES, PROB_DETECTION, SONAR_RANGE, a, x_nav, x_common_bar, ...
-                                                                            P_common_bar, x_bars, P_bars, x_common, P_common, DELTA_RANGE, DELTA_AZIMUTH, ...
-                                                                            x_hats, Ps, num_implicit, num_explicit);
-            [x_hat, P, x_common, P_common] = modem_schedule( ...
+            [x_hat, P, ledger] = dt_filter_sonar(x_hat, P, x_gt, w, w_perceived_sonar_range, w_perceived_sonar_azimuth, NUM_AGENTS, STATES, PROB_DETECTION, SONAR_RANGE, a, x_nav, ledger, loop_num);
+            % [x_hat, P, x_common, P_common, x_hats, Ps, num_implicit, num_explicit] = filter_sonar_et(  ...
+            %                                                                 x_hat, P, x_gt, w, w_perceived_sonar_range, w_perceived_sonar_azimuth, ... 
+            %                                                                 NUM_AGENTS, BLUE_NUM, STATES, PROB_DETECTION, SONAR_RANGE, a, x_nav, x_common_bar, ...
+            %                                                                 P_common_bar, x_bars, P_bars, x_common, P_common, DELTA_RANGE, DELTA_AZIMUTH, ...
+            %                                                                 x_hats, Ps, num_implicit, num_explicit);
+            [x_hat, P, x_common, P_common, ledger] = dt_modem_schedule( ...
                                             BLUE_NUM, NUM_AGENTS, loop_num, x_hat, P, x_hats, Ps, x_gt, w, ...
                                             w_perceived_modem_range, w_perceived_modem_azimuth, STATES, ...
-                                            TRACK_STATES, a, x_common, P_common);
+                                            TRACK_STATES, a, x_common, P_common, ledger);
             %% INTERSECT TRACK & NAV FILTER
             [x_nav, P_nav, x_hat, P] = intersect_estimates(x_nav, P_nav, x_hat, P, a, STATES);
 
@@ -198,6 +204,7 @@ function [] = qasi_ddf(mc_run_num)
         end
         loop_num = loop_num + 1;
     end
+    ledger
 
     % Plot error
     ts2a = zeros(STATES, TOTAL_STATES);
@@ -206,10 +213,10 @@ function [] = qasi_ddf(mc_run_num)
     error = ts2a * (x_gt_history - x_nav_history);
     error = normalize_state(error, 1, STATES);
     P_nav_history_agent = ts2a * P_nav_history;
-    % plot_error_nav(error, P_nav_history, NUM_LOOPS, STATES, AGENT_TO_PLOT);
+    plot_error_nav(error, P_nav_history, NUM_LOOPS, STATES, AGENT_TO_PLOT);
     %plot_norm_error(error);
 
-    % plot_error(x_hat_error_history, P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_AGENTS, AGENT_TO_PLOT);
+    plot_error(x_hat_error_history, P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_AGENTS, AGENT_TO_PLOT);
 
     % Make animation
     % make_animation_nav(STATES, NUM_AGENTS, MAP_DIM, NUM_LOOPS, x_gt_history, x_nav_history, P_nav_history);
