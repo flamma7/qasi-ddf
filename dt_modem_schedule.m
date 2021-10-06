@@ -29,7 +29,6 @@ function [x_hat, P, x_common, P_common, ledger] = dt_modem_schedule(...
                                         max_num_meas, agent, q_perceived_tracking, w_perceived_modem_range, ...
                                         w_perceived_modem_azimuth, w_perceived_sonar_range, w_perceived_sonar_azimuth, NUM_AGENTS);
 
-                share_buffer
                 mult
                 assert(0);
 

@@ -17,7 +17,7 @@ function [x_common_debug, P_common_debug, mult, share_buffer, explicit_cnt, impl
     data_col = find(meas_columns == "data");
 
     upper_bound = 10; % Consider using an exponential bound ie 1,2,5,10,20,40,80...
-    lower_bound = 1;
+    lower_bound = 0;
     precision_bound = 0.5;
     mult_options = lower_bound : precision_bound : upper_bound;
 
@@ -119,16 +119,12 @@ function [x_common_debug, P_common_debug, mult, share_buffer, explicit_cnt, impl
         ind = find(mult_options == mult);
         [explicit_cnt, implicit_cnt] = get_buffer_size(share_buffer);
 
-        mult
-        explicit_cnt
-        implicit_cnt
-
         if explicit_cnt > max_num_meas
             if length(mult_options) == 1 % there were no matches
                 disp("Buffer upper bound was too low. No deltabands consistent");
                 assert(0);
             end
-            mult_options = mult_options(ind:end);
+            mult_options = mult_options(ind+1:end);
         else
             mult_options = mult_options(1:ind);
         end
