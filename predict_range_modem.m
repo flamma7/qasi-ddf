@@ -1,8 +1,8 @@
 function [pred, C] = predict_range_modem(x_hat, start_x1)
 
-    x1 = x_hat(start_x1,1);
-    y1 = x_hat(start_x1+1,1);
-    blue_position = [x1, y1];
+    x = x_hat(start_x1,1);
+    y = x_hat(start_x1+1,1);
+    blue_position = [x, y];
     pred = norm(blue_position);
 
     drdx = x / norm(blue_position);
