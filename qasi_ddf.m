@@ -31,7 +31,7 @@ function [] = qasi_ddf(mc_run_num)
     TRACK_STATES = 4 * NUM_AGENTS; % x,y,x_dot, y_dot for each agent
     TOTAL_STATES = STATES * NUM_AGENTS; 
     TOTAL_TRACK_STATES = TRACK_STATES * BLUE_NUM;
-    NUM_LOOPS = 20;
+    NUM_LOOPS = 200;
     MAP_DIM = 20; % Square with side length
     PROB_DETECTION = 1.0;
     SONAR_RANGE = 10.0;
@@ -101,8 +101,8 @@ function [] = qasi_ddf(mc_run_num)
     meas_columns = ["type", "index", "start_x1", "start_x2", "data"];
     ledger = zeros(3000, length(meas_columns) * BLUE_NUM);
 
-    x_nav_history = zeros(size(x_gt_history));
-    P_nav_history = zeros(TOTAL_STATES, STATES*NUM_LOOPS);
+    x_navs_history = zeros( size(x_navs,1), NUM_LOOPS); % each row is an agent's x_nav history
+    P_navs_history = zeros( size(x_navs,1), STATES*NUM_LOOPS);
     x_hat_error_history = zeros(TOTAL_TRACK_STATES, NUM_LOOPS);
     P_history = zeros(TOTAL_TRACK_STATES, TRACK_STATES*NUM_LOOPS);
 
@@ -191,7 +191,7 @@ function [] = qasi_ddf(mc_run_num)
                                                 BLUE_NUM, NUM_AGENTS, loop_num, x_hat, P, x_hats, Ps, x_gt, w, ...
                                                 w_perceived_modem_range, w_perceived_modem_azimuth, w_perceived_sonar_range, w_perceived_sonar_azimuth,...
                                                 q_perceived_tracking, STATES, TRACK_STATES, a, x_common, P_common, ledger, last_index,...
-                                                DELTA_RANGE, DELTA_AZIMUTH, MAX_SHARE_MEAS);
+                                                DELTA_RANGE, DELTA_AZIMUTH, MAX_SHARE_MEAS, x_navs_history, P_navs_history);
             %% INTERSECT TRACK & NAV FILTER
             [x_nav, P_nav, x_hat, P] = intersect_estimates(x_nav, P_nav, x_hat, P, a, STATES);
 
@@ -200,9 +200,11 @@ function [] = qasi_ddf(mc_run_num)
             [x_navs, P_navs] = set_estimate(x_navs, P_navs, STATES, x_nav, P_nav, a);
 
             % Record history for plotting
-            x_nav_history(STATES*(a-1)+1:STATES*a, loop_num) = x_nav;
-            P_nav_history(STATES*(a-1)+1:STATES*a, STATES*(loop_num-1)+1 : STATES*loop_num) = P_nav;
-            % x_hat_history(TRACK_STATES*(a-1)+1:TRACK_STATES*a, loop_num) = x_hat;
+            [x_navs_history, P_navs_history] = set_estimate_nav_history(x_navs_history, P_navs_history, x_nav, P_nav, STATES, a, loop_num);
+
+            % x_nav_history(STATES*(a-1)+1:STATES*a, loop_num) = x_nav;
+            % P_nav_history(STATES*(a-1)+1:STATES*a, STATES*(loop_num-1)+1 : STATES*loop_num) = P_nav;
+            % x_hat_history(TRACK_STATES*(a-1)+1:TRACK_STATES*a, loop_num) = x_hat; % we're tracking error below
             P_history(TRACK_STATES*(a-1)+1:TRACK_STATES*a, TRACK_STATES*(loop_num-1)+1 : TRACK_STATES*loop_num) = P;
 
             track_error = get_error(x_gt, x_hat, NUM_AGENTS, STATES);
@@ -210,15 +212,19 @@ function [] = qasi_ddf(mc_run_num)
         end
         loop_num = loop_num + 1;
     end
-    ledger
+    % ledger
 
     % Plot error
     ts2a = zeros(STATES, TOTAL_STATES);
     ts2a(:, STATES*(AGENT_TO_PLOT-1)+1 : STATES*AGENT_TO_PLOT) = eye(STATES);
+    [x_nav_history, P_nav_history] = get_estimate_nav_history(x_navs_history, P_navs_history, STATES, AGENT_TO_PLOT);
+    tmp = zeros(size(x_gt_history));
+    tmp(STATES*(AGENT_TO_PLOT-1)+1 : STATES*AGENT_TO_PLOT, :) = x_nav_history;
+    x_nav_history = tmp;
 
     error = ts2a * (x_gt_history - x_nav_history);
     error = normalize_state(error, 1, STATES);
-    P_nav_history_agent = ts2a * P_nav_history;
+    % P_nav_history_agent = ts2a * P_nav_history;
     plot_error_nav(error, P_nav_history, NUM_LOOPS, STATES, AGENT_TO_PLOT);
     %plot_norm_error(error);
 
