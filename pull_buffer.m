@@ -16,7 +16,7 @@ function [x_common_debug, P_common_debug, mult, share_buffer, explicit_cnt, impl
     startx2_col = find(meas_columns == "start_x2");
     data_col = find(meas_columns == "data");
 
-    upper_bound = 10; % Consider using an exponential bound ie 1,2,5,10,20,40,80...
+    upper_bound = 100; % Consider using an exponential bound ie 1,2,5,10,20,40,80...
     lower_bound = 0;
     precision_bound = 0.5;
     mult_options = lower_bound : precision_bound : upper_bound;

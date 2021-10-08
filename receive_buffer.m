@@ -1,6 +1,6 @@
 function [x_hat, P, x_common_debug, P_common_debug] = receive_buffer( ...
                             last_x_hat, last_P, start_index, last_index, share_buffer, mult, ledger, ...
-                            x_navs_history, P_navs_history, x_common, P_common, agent, NUM_AGENTS, q_perceived_tracking, ...
+                            x_common, P_common, agent, NUM_AGENTS, q_perceived_tracking, ...
                             delta_range, delta_azimuth, STATES, x_nav_history, P_nav_history, ...
                             w_perceived_modem_range, w_perceived_modem_azimuth, w_perceived_sonar_range, ...
                             w_perceived_sonar_azimuth)
@@ -19,20 +19,20 @@ function [x_hat, P, x_common_debug, P_common_debug] = receive_buffer( ...
 
     for index = start_index : last_index
 
-        %% PREDICTION COMMON
+        % PREDICTION COMMON
         [x_common, P_common] = propagate(x_common, P_common, NUM_AGENTS, q_perceived_tracking);
         x_common_bar = x_common;
         P_common_bar = P_common;
-        %% PREDICTION MAIN ESTIMATE
+        % PREDICTION MAIN ESTIMATE
         [x_hat, P] = propagate(x_hat, P, NUM_AGENTS, q_perceived_tracking);
         x_hat_bar = x_hat;
         P_bar = P;
 
-        %% CORRECTION SHARED ESTIMATES
+        % CORRECTION SHARED ESTIMATES
         shared_measurements = get_measurements(share_buffer, index);
-        for i = 1:size(measurements,1)
+        for i = 1:size(shared_measurements,1)
 
-            meas = measurements(i,:);
+            meas = shared_measurements(i,:);
             meas_type = meas_types( meas(1,meas_type_col) );
             start_x1 = meas(1,startx1_col);
             start_x2 = meas(1,startx2_col);
@@ -131,11 +131,11 @@ function [x_hat, P, x_common_debug, P_common_debug] = receive_buffer( ...
                 rank(P);
             else
                 disp("Unrecognized measurement type: " + meas_type);
-                assert(0);
+                % assert(0);
             end
         end % measurements
 
-        %% CORRECTION OWN MEASUREMENTS (ALL EXPLICIT)
+        % CORRECTION OWN MEASUREMENTS (ALL EXPLICIT)
         measurements = get_measurements(agent_ledger, index);
         for i = 1:size(measurements,1)
 
@@ -180,8 +180,11 @@ function [x_hat, P, x_common_debug, P_common_debug] = receive_buffer( ...
             end
         end % measurements
 
-        % FUSE NAVIGATION AND MAIN ESTIMATES
-        [_x_nav, _P_nav, x_hat, P] = intersect_estimates(x_nav, P_nav, x_hat, P, agent, STATES);
+        [x_nav, P_nav] = get_estimate_nav_index(x_nav_history, P_nav_history, STATES, index);
+        if sum(x_nav == 0) ~= length(x_nav)
+            % FUSE NAVIGATION AND MAIN ESTIMATES
+            [x_nav_, P_nav_, x_hat, P] = intersect_estimates(x_nav, P_nav, x_hat, P, agent, STATES);
+        end
     end 
     x_common_debug = x_common;
     P_common_debug = P_common;
