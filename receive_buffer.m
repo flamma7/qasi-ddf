@@ -27,6 +27,7 @@ function [x_hat, P, x_common_debug, P_common_debug] = receive_buffer( ...
         [x_hat, P] = propagate(x_hat, P, NUM_AGENTS, q_perceived_tracking);
         x_hat_bar = x_hat;
         P_bar = P;
+        rank(P);
 
         % CORRECTION SHARED ESTIMATES
         shared_measurements = get_measurements(share_buffer, index);
@@ -90,6 +91,19 @@ function [x_hat, P, x_common_debug, P_common_debug] = receive_buffer( ...
                 [h_x_bar, C_] = predict_range(x_hat_bar, start_x1, start_x2);
                 [h_x_ref, C_] = predict_range(x_ref, start_x1, start_x2);
                 angle_meas = false;
+
+                % delta
+                % x_hat_bar
+                % P_bar
+                % x_hat
+                % P
+                % x_ref
+                % C
+                % R
+                % h_x_hat
+                % h_x_bar
+                % h_x_ref
+
                 [x_hat, P] = implicit_fuse(x_hat_bar, P_bar, x_hat, P, x_ref, C, R, delta, h_x_hat, h_x_bar, h_x_ref, angle_meas);
                 rank(P);
 

@@ -152,7 +152,7 @@ function [x_hat, P, x_common, P_common, x_hats, Ps, num_implicit, num_explicit] 
                     num_implicit = num_implicit + 1;
                 end
 
-                [x_hats, Ps] = set_estimate(x_hats, Ps, 4, x_hat_a2, P_a2, a2);
+                [x_hats, Ps] = set_estimate(x_hats, Ps, x_hat_a2, P_a2, a2);
             end
         end
     end

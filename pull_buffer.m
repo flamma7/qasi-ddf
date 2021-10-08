@@ -18,7 +18,7 @@ function [x_common_debug, P_common_debug, mult, share_buffer, explicit_cnt, impl
 
     upper_bound = 100; % Consider using an exponential bound ie 1,2,5,10,20,40,80...
     lower_bound = 0;
-    precision_bound = 0.5;
+    precision_bound = 2;
     mult_options = lower_bound : precision_bound : upper_bound;
 
     mult = mult_options(ceil(end/2)); % Pick middle of array
@@ -31,7 +31,7 @@ function [x_common_debug, P_common_debug, mult, share_buffer, explicit_cnt, impl
 
         x_common = x_common_start; % Use this variable for below calculations
         P_common = P_common_start;
-        share_buffer = zeros(size(ledger)); % Needs to be of size ledger for add_meas()
+        share_buffer = zeros(100, size(ledger,2)); % Needs to be of size ledger for add_meas()
 
         for index = start_index : last_index
 
