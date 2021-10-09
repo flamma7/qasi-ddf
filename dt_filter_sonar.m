@@ -25,16 +25,27 @@ function [x_hat, P, ledger] = dt_filter_sonar(x_hat, P, x_gt, w, w_perceived_son
             start_x1 = 4*(agent-1)+1;
             start_x2 = 4*(a-1)+1;
             [pred_range, C_range] = predict_range(x_hat, start_x1, start_x2);
-            [pred_azimuth, C_azimuth] = predict_azimuth(x_hat, start_x1, start_x2);
 
-            meas = [pred_range; pred_azimuth];
-            innovation = [rel_range_meas; rel_azimuth_meas] - meas;
-            innovation(2) = normalize_angle(innovation(2));
-            R = diag([w_perceived_sonar_range, w_perceived_sonar_azimuth]);
-            C = [C_range; C_azimuth];
-            K = P * C' * inv(C * P * C' + R);
+            % Splitting up to compare results
+            innovation = rel_range_meas - pred_range;
+            K = P * C_range' * inv(C_range * P * C_range' + w_perceived_sonar_range);
             x_hat = x_hat + K * innovation;
-            P = P - K*C*P;
+            P = P - K*C_range*P;
+
+            [pred_azimuth, C_azimuth] = predict_azimuth(x_hat, start_x1, start_x2);
+            innovation = rel_azimuth_meas - pred_azimuth;
+            K = P * C_azimuth' * inv(C_azimuth * P * C_azimuth' + w_perceived_sonar_azimuth);
+            x_hat = x_hat + K * innovation;
+            P = P - K*C_azimuth*P;
+
+            % meas = [pred_range; pred_azimuth];
+            % innovation = [rel_range_meas; rel_azimuth_meas] - meas;
+            % innovation(2) = normalize_angle(innovation(2));
+            % R = diag([w_perceived_sonar_range, w_perceived_sonar_azimuth]);
+            % C = [C_range; C_azimuth];
+            % K = P * C' * inv(C * P * C' + R);
+            % x_hat = x_hat + K * innovation;
+            % P = P - K*C*P;
 
             % Add measurements to ledger
             ledger = add_meas(ledger, agent, "sonar_range", index, start_x1, start_x2, rel_range_meas);

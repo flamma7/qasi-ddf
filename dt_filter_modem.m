@@ -11,16 +11,25 @@ function [x_hat, P, ledger] = dt_filter_modem(x_hat, P, x_gt, w, w_perceived_mod
         startx = 4*(b-1)+1;
         
         [pred_range, C_range] = predict_range_modem(x_hat, startx);
-        [pred_azimuth, C_azimuth] = predict_azimuth_modem(x_hat, startx);
-
-        meas = [pred_range; pred_azimuth];
-        innovation = [range_meas; azimuth_meas] - meas;
-        innovation(2) = normalize_angle(innovation(2));
-        R = diag([w_perceived_modem_range, w_perceived_modem_azimuth]);
-        C = [C_range; C_azimuth];
-        K = P * C' * inv(C * P * C' + R);
+        innovation = range_meas - pred_range;
+        K = P * C_range' * inv(C_range * P * C_range' + w_perceived_modem_range);
         x_hat = x_hat + K * innovation;
-        P = P - K*C*P;
+        P = P - K*C_range*P;
+
+        [pred_azimuth, C_azimuth] = predict_azimuth_modem(x_hat, startx);
+        innovation = azimuth_meas - pred_azimuth;
+        K = P * C_azimuth' * inv(C_azimuth * P * C_azimuth' + w_perceived_modem_azimuth);
+        x_hat = x_hat + K * innovation;
+        P = P - K*C_azimuth*P;
+
+        % meas = [pred_range; pred_azimuth];
+        % innovation = [range_meas; azimuth_meas] - meas;
+        % innovation(2) = normalize_angle(innovation(2));
+        % R = diag([w_perceived_modem_range, w_perceived_modem_azimuth]);
+        % C = [C_range; C_azimuth];
+        % K = P * C' * inv(C * P * C' + R);
+        % x_hat = x_hat + K * innovation;
+        % P = P - K*C*P;
 
         % Add meas to ledger
         ledger = add_meas(ledger, agent, "modem_range", index, startx, 0, range_meas);

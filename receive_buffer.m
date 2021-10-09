@@ -18,7 +18,7 @@ function [x_hat, P, x_common_debug, P_common_debug] = receive_buffer( ...
     agent_ledger = get_ledger(ledger, agent);
     x_hat_history = []; % TODO rem
 
-    disp("Receiving buffer start: " + int2str(start_index) + " to " + int2str(last_index));
+    disp("Agent " + int2str(agent) + " receiving buffer from " + int2str(start_index) + " to " + int2str(last_index));
     for index = start_index : last_index
         x_hat_history = [x_hat_history, x_hat]; % TODO rem
         % PREDICTION COMMON
@@ -199,7 +199,7 @@ function [x_hat, P, x_common_debug, P_common_debug] = receive_buffer( ...
         [x_nav, P_nav] = get_estimate_nav_index(x_nav_history, P_nav_history, STATES, index);
         if sum(x_nav == 0) ~= length(x_nav)
             % FUSE NAVIGATION AND MAIN ESTIMATES
-            [x_nav_, P_nav_, x_hat, P] = intersect_estimates(x_nav, P_nav, x_hat, P, agent, STATES);
+            [x_nav_, P_nav_, x_hat, P] = intersect_estimates(x_nav, P_nav, x_hat, P, agent, STATES); % TODO add
         end
     end 
     x_hat_history = [x_hat_history, x_hat];

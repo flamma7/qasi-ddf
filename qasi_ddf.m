@@ -11,6 +11,8 @@ function [] = qasi_ddf(mc_run_num)
     % 7. Increase number of agents & duration
     % 8. Selective information sharing (compare w/ random sharing)
 
+    % PRO TIP: just maintain a ledger and index, it's so much easier than maintaining a state
+
     if nargin < 1
         rng(1);
         close all; clear all; clc;
@@ -30,7 +32,7 @@ function [] = qasi_ddf(mc_run_num)
     TRACK_STATES = 4 * NUM_AGENTS; % x,y,x_dot, y_dot for each agent
     TOTAL_STATES = STATES * NUM_AGENTS; 
     TOTAL_TRACK_STATES = TRACK_STATES * BLUE_NUM;
-    NUM_LOOPS = 2000; % 643
+    NUM_LOOPS = 1000; % 643
     MAP_DIM = 20; % Square with side length
     PROB_DETECTION = 0.8;
     SONAR_RANGE = 10.0;
@@ -96,9 +98,7 @@ function [] = qasi_ddf(mc_run_num)
     [x_hats, Ps] = initialize_x_hats(x_gt, P, NUM_AGENTS, STATES, BLUE_NUM);
     [x_common, P_common] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, 1); % copy the initial estimate
 
-    % DeltaTier
-    last_x_hats = x_hats;
-    last_Ps = Ps;
+    % DeltaTier (good trick: record all of the estimates and just index which one you want...)
     last_index = 1;
     meas_columns = ["type", "index", "start_x1", "start_x2", "data"];
     ledger = zeros(3000, length(meas_columns) * BLUE_NUM);
@@ -107,6 +107,7 @@ function [] = qasi_ddf(mc_run_num)
     P_navs_history = zeros( size(x_navs,1), STATES*NUM_LOOPS);
     x_hat_error_history = zeros(TOTAL_TRACK_STATES, NUM_LOOPS);
     P_history = zeros(TOTAL_TRACK_STATES, TRACK_STATES*NUM_LOOPS);
+    x_hat_history = zeros(TOTAL_TRACK_STATES, NUM_LOOPS);
 
     common_error_history = [];
     common_P_history = [];
@@ -121,9 +122,6 @@ function [] = qasi_ddf(mc_run_num)
 
     % Initialize waypoints
     waypoints = randi(2*MAP_DIM, 2*NUM_AGENTS,1) - MAP_DIM;
-
-    % TODO rem
-    x_hat_history = [];
 
     loop_num = 1;
     while loop_num < NUM_LOOPS + 1
@@ -167,51 +165,58 @@ function [] = qasi_ddf(mc_run_num)
             [x_nav, P_nav] = filter_dvl(x_nav, P_nav, x_gt, w, w_perceived, NUM_AGENTS, TOTAL_STATES, a); % DVL
             [x_nav, P_nav] = filter_gyro(x_nav, P_nav, x_gt, w, w_perceived, NUM_AGENTS, TOTAL_STATES, a); % Gyro
             [x_nav, P_nav] = filter_compass(x_nav, P_nav, x_gt, w, w_perceived, NUM_AGENTS, TOTAL_STATES, a); % Compass
+            % Record history for plotting
+            [x_navs_history, P_navs_history] = set_estimate_nav_history(x_navs_history, P_navs_history, x_nav, P_nav, STATES, a, loop_num);
 
             %% TRACKING FILTER PREDICTION
             [x_hat, P] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, a);
 
-            % TODO rem
-            if a == 2
-                x_hat_history = [x_hat_history, x_hat];
-            end
             [x_hat, P] = propagate(x_hat, P, NUM_AGENTS, q_perceived_tracking); % Scale the process noise to account for nonlinearities
             % TRACKING FILTER CORRECTION
+            % TODO add
             [x_hat, P, ledger] = dt_filter_sonar(x_hat, P, x_gt, w, w_perceived_sonar_range, w_perceived_sonar_azimuth, NUM_AGENTS, STATES, PROB_DETECTION, SONAR_RANGE, a, x_nav, ledger, loop_num);
-            % [x_hat, P, x_common, P_common, x_hats, Ps, implicit_cnt, explicit_cnt] = filter_sonar_et(  ...
-            %                                                                 x_hat, P, x_gt, w, w_perceived_sonar_range, w_perceived_sonar_azimuth, ... 
-            %                                                                 NUM_AGENTS, BLUE_NUM, STATES, PROB_DETECTION, SONAR_RANGE, a, x_nav, x_common_bar, ...
-            %                                                                 P_common_bar, x_bars, P_bars, x_common, P_common, DELTA_RANGE, DELTA_AZIMUTH, ...
-            %                                                                 x_hats, Ps, implicit_cnt, explicit_cnt);
-            % [x_hat, P, x_common, P_common, ledger] = dt_modem_schedule( ...
-            %                                 BLUE_NUM, NUM_AGENTS, loop_num, x_hat, P, x_hats, Ps, x_gt, w, ...
-            %                                 w_perceived_modem_range, w_perceived_modem_azimuth, STATES, ...
-            %                                 TRACK_STATES, a, x_common, P_common, ledger);
-            [x_hat, P, x_common, P_common, ledger, x_hats, Ps, last_x_hats, last_Ps, explicit_cnt, implicit_cnt, last_index] = dt_modem_schedule(...
-                                                BLUE_NUM, NUM_AGENTS, loop_num, x_hat, P, x_hats, Ps, x_gt, w, ...
-                                                w_perceived_modem_range, w_perceived_modem_azimuth, w_perceived_sonar_range, w_perceived_sonar_azimuth,...
-                                                q_perceived_tracking, STATES, TRACK_STATES, a, x_common, P_common, ledger, last_index,...
-                                                DELTA_RANGE, DELTA_AZIMUTH, MAX_SHARE_MEAS, x_navs_history, P_navs_history, last_x_hats, last_Ps, ...
-                                                explicit_cnt, implicit_cnt);
+
             % INTERSECT TRACK & NAV FILTER
-            [x_nav, P_nav, x_hat, P] = intersect_estimates(x_nav, P_nav, x_hat, P, a, STATES);
+            [x_nav, P_nav, x_hat, P] = intersect_estimates(x_nav, P_nav, x_hat, P, a, STATES); % TODO add
 
             % SAVE ESTIMATES
             [x_hats, Ps] = set_estimate(x_hats, Ps, x_hat, P, a);
             [x_navs, P_navs] = set_estimate(x_navs, P_navs, x_nav, P_nav, a);
 
-            % Record history for plotting
-            [x_navs_history, P_navs_history] = set_estimate_nav_history(x_navs_history, P_navs_history, x_nav, P_nav, STATES, a, loop_num);
+            % Record here once for use with modem sharing
+            x_hat_history(TRACK_STATES*(a-1)+1:TRACK_STATES*a, loop_num) = x_hat;
+            P_history(TRACK_STATES*(a-1)+1:TRACK_STATES*a, TRACK_STATES*(loop_num-1)+1 : TRACK_STATES*loop_num) = P;
 
             % x_nav_history(STATES*(a-1)+1:STATES*a, loop_num) = x_nav;
             % P_nav_history(STATES*(a-1)+1:STATES*a, STATES*(loop_num-1)+1 : STATES*loop_num) = P_nav;
             % x_hat_history(TRACK_STATES*(a-1)+1:TRACK_STATES*a, loop_num) = x_hat; % we're tracking error below
-            P_history(TRACK_STATES*(a-1)+1:TRACK_STATES*a, TRACK_STATES*(loop_num-1)+1 : TRACK_STATES*loop_num) = P;
+        end
 
+        % MODEM SHARING & ERROR RECORDING
+        for a = 1:BLUE_NUM
+            [x_hat, P] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, a);
+            [x_hat, P, x_common, P_common, ledger, x_hats, Ps, explicit_cnt, implicit_cnt, last_index] = dt_modem_schedule(...
+                                    BLUE_NUM, NUM_AGENTS, loop_num, x_hat, P, x_hats, Ps, x_gt, w, ...
+                                    w_perceived_modem_range, w_perceived_modem_azimuth, w_perceived_sonar_range, w_perceived_sonar_azimuth,...
+                                    q_perceived_tracking, STATES, TRACK_STATES, a, x_common, P_common, ledger, last_index,...
+                                    DELTA_RANGE, DELTA_AZIMUTH, MAX_SHARE_MEAS, x_navs_history, P_navs_history, x_hat_history, P_history, ...
+                                    explicit_cnt, implicit_cnt);
+            [x_hats, Ps] = set_estimate(x_hats, Ps, x_hat, P, a);
+
+            
+        end
+        explicit_cnt
+        implicit_cnt
+
+        % For recording the final state
+        for a = 1:BLUE_NUM 
+            [x_hat, P] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, a);
+            x_hat_history(TRACK_STATES*(a-1)+1:TRACK_STATES*a, loop_num) = x_hat;
+            P_history(TRACK_STATES*(a-1)+1:TRACK_STATES*a, TRACK_STATES*(loop_num-1)+1 : TRACK_STATES*loop_num) = P;
             track_error = get_error(x_gt, x_hat, NUM_AGENTS, STATES);
             x_hat_error_history(TRACK_STATES*(a-1)+1:TRACK_STATES*a, loop_num) = track_error;
-
         end
+
         common_error = get_error(x_gt, x_common, NUM_AGENTS, STATES);
         common_error_history = [common_error_history, common_error];
         common_P_history = [common_P_history, P_common];
@@ -219,7 +224,6 @@ function [] = qasi_ddf(mc_run_num)
         loop_num = loop_num + 1
     end
     ledger;
-    % x_hat_history
 
     % Plot error
     ts2a = zeros(STATES, TOTAL_STATES);
