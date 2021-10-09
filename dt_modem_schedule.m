@@ -28,7 +28,6 @@ function [x_hat, P, x_common, P_common, ledger, x_hats, Ps, last_x_hats, last_Ps
         P_common_debug = P_common;
 
         if agent_share_times(agent) == iter % Agent's turn to share
-            agent = 1; % TODO rem
 
             [x_common_debug, P_common_debug, mult, share_buffer, new_explicit_cnt, new_implicit_cnt] = pull_buffer( ...
                             last_share_index, loop_num, x_common, P_common, ledger, delta_range, delta_azimuth, ...

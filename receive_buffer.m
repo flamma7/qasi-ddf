@@ -147,7 +147,7 @@ function [x_hat, P, x_common_debug, P_common_debug] = receive_buffer( ...
                 rank(P);
             else
                 disp("Unrecognized measurement type: " + meas_type);
-                % assert(0);
+                assert(0);
             end
         end % measurements
 
