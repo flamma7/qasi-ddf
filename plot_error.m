@@ -50,8 +50,8 @@ function [] = plot_error(error, P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_
             plot(-bound,"green");
 
             % For modem activity...
-            xline(modem_times, '--b');
-            xline(broadcast_times, "--c");
+            % xline(modem_times, '--b');
+            % xline(broadcast_times, "--c");
     end
     sgtitle(plot_title);
     

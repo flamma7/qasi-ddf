@@ -202,7 +202,8 @@ function [x_hat, P, x_common_debug, P_common_debug] = receive_buffer( ...
             [x_nav_, P_nav_, x_hat, P] = intersect_estimates(x_nav, P_nav, x_hat, P, agent, STATES);
         end
     end 
-    x_hat_history % TODO rem
+    x_hat_history = [x_hat_history, x_hat];
+    % x_hat_history % TODO rem
     x_common_debug = x_common;
     P_common_debug = P_common;
 end                            

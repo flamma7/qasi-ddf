@@ -16,7 +16,7 @@ function [x_hat, P, x_common, P_common, ledger, x_hats, Ps, last_x_hats, last_Ps
     for b = 1:BLUE_NUM
         agent_share_times = [agent_share_times, ping_time + broadcast_delay*b];
     end
-    agent_share_times = [5, 9]; % TODO rem
+    % agent_share_times = [5, 9]; % TODO rem
     total_time = agent_share_times(end) + 1;
     iter = mod( loop_num, total_time );
 
@@ -44,8 +44,9 @@ function [x_hat, P, x_common, P_common, ledger, x_hats, Ps, last_x_hats, last_Ps
             %     share_buffer
             %     diff = original_buffer - share_buffer
             % else
-            %     share_buffer = quantize_buffer(share_buffer); % TODO add
+            %     
             % end
+            share_buffer = quantize_buffer(share_buffer);
 
             for b = 1:BLUE_NUM % Loop through all agents and share measurements
                 if b == agent % Don't share with ourselves...
@@ -62,8 +63,8 @@ function [x_hat, P, x_common, P_common, ledger, x_hats, Ps, last_x_hats, last_Ps
                             delta_range, delta_azimuth, STATES, x_nav_history_b, P_nav_history_b, ...
                             w_perceived_modem_range, w_perceived_modem_azimuth, w_perceived_sonar_range, ...
                             w_perceived_sonar_azimuth);
-                assert(isequal(x_common_debug, x_common_debug2));
-                assert(isequal(P_common_debug, P_common_debug2));
+                % assert(isequal(x_common_debug, x_common_debug2));
+                % assert(isequal(P_common_debug, P_common_debug2));
 
                 % Set the last_x_hats, last_Ps
                 [last_x_hats, last_Ps] = set_estimate(last_x_hats, last_Ps, x_hat_b, P_b, b);

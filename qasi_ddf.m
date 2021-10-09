@@ -30,7 +30,7 @@ function [] = qasi_ddf(mc_run_num)
     TRACK_STATES = 4 * NUM_AGENTS; % x,y,x_dot, y_dot for each agent
     TOTAL_STATES = STATES * NUM_AGENTS; 
     TOTAL_TRACK_STATES = TRACK_STATES * BLUE_NUM;
-    NUM_LOOPS = 10; % 643
+    NUM_LOOPS = 2000; % 643
     MAP_DIM = 20; % Square with side length
     PROB_DETECTION = 0.8;
     SONAR_RANGE = 10.0;
@@ -219,7 +219,7 @@ function [] = qasi_ddf(mc_run_num)
         loop_num = loop_num + 1
     end
     ledger;
-    x_hat_history
+    % x_hat_history
 
     % Plot error
     ts2a = zeros(STATES, TOTAL_STATES);
