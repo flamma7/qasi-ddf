@@ -30,7 +30,7 @@ function [] = qasi_ddf(mc_run_num)
     TRACK_STATES = 4 * NUM_AGENTS; % x,y,x_dot, y_dot for each agent
     TOTAL_STATES = STATES * NUM_AGENTS; 
     TOTAL_TRACK_STATES = TRACK_STATES * BLUE_NUM;
-    NUM_LOOPS = 500; % 643
+    NUM_LOOPS = 10; % 643
     MAP_DIM = 20; % Square with side length
     PROB_DETECTION = 0.8;
     SONAR_RANGE = 10.0;
@@ -122,6 +122,9 @@ function [] = qasi_ddf(mc_run_num)
     % Initialize waypoints
     waypoints = randi(2*MAP_DIM, 2*NUM_AGENTS,1) - MAP_DIM;
 
+    % TODO rem
+    x_hat_history = [];
+
     loop_num = 1;
     while loop_num < NUM_LOOPS + 1
         % Calculate new waypoints
@@ -167,6 +170,11 @@ function [] = qasi_ddf(mc_run_num)
 
             %% TRACKING FILTER PREDICTION
             [x_hat, P] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, a);
+
+            % TODO rem
+            if a == 2
+                x_hat_history = [x_hat_history, x_hat];
+            end
             [x_hat, P] = propagate(x_hat, P, NUM_AGENTS, q_perceived_tracking); % Scale the process noise to account for nonlinearities
             % TRACKING FILTER CORRECTION
             [x_hat, P, ledger] = dt_filter_sonar(x_hat, P, x_gt, w, w_perceived_sonar_range, w_perceived_sonar_azimuth, NUM_AGENTS, STATES, PROB_DETECTION, SONAR_RANGE, a, x_nav, ledger, loop_num);
@@ -211,6 +219,7 @@ function [] = qasi_ddf(mc_run_num)
         loop_num = loop_num + 1
     end
     ledger;
+    x_hat_history
 
     % Plot error
     ts2a = zeros(STATES, TOTAL_STATES);

@@ -16,7 +16,7 @@ function [x_hat, P, x_common, P_common, ledger, x_hats, Ps, last_x_hats, last_Ps
     for b = 1:BLUE_NUM
         agent_share_times = [agent_share_times, ping_time + broadcast_delay*b];
     end
-    agent_share_times = [2, 4]; % TODO rem
+    agent_share_times = [5, 9]; % TODO rem
     total_time = agent_share_times(end) + 1;
     iter = mod( loop_num, total_time );
 
@@ -70,7 +70,7 @@ function [x_hat, P, x_common, P_common, ledger, x_hats, Ps, last_x_hats, last_Ps
                 [x_hats, Ps] = set_estimate(x_hats, Ps, x_hat_b, P_b, b);
                 
             end % for
-            last_share_index = loop_num;
+            last_share_index = loop_num + 1;
         end % if 
         x_common = x_common_debug;
         P_common = P_common_debug;

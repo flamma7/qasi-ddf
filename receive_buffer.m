@@ -16,9 +16,11 @@ function [x_hat, P, x_common_debug, P_common_debug] = receive_buffer( ...
     x_hat = last_x_hat;
     P = last_P;
     agent_ledger = get_ledger(ledger, agent);
+    x_hat_history = []; % TODO rem
 
+    disp("Receiving buffer start: " + int2str(start_index) + " to " + int2str(last_index));
     for index = start_index : last_index
-
+        x_hat_history = [x_hat_history, x_hat]; % TODO rem
         % PREDICTION COMMON
         [x_common, P_common] = propagate(x_common, P_common, NUM_AGENTS, q_perceived_tracking);
         x_common_bar = x_common;
@@ -200,6 +202,7 @@ function [x_hat, P, x_common_debug, P_common_debug] = receive_buffer( ...
             [x_nav_, P_nav_, x_hat, P] = intersect_estimates(x_nav, P_nav, x_hat, P, agent, STATES);
         end
     end 
+    x_hat_history % TODO rem
     x_common_debug = x_common;
     P_common_debug = P_common;
 end                            
