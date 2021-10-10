@@ -38,9 +38,9 @@ function [] = qasi_ddf(mc_run_num)
     SONAR_RANGE = 10.0;
     MODEM_LOCATION = [11,11]';
 
-    MAX_SHARE_MEAS = 20;
-    DELTA_RANGE = 0.3;
-    DELTA_AZIMUTH = 0.03;
+    MAX_SHARE_MEAS = 2000;
+    DELTA_RANGE = 0.0;
+    DELTA_AZIMUTH = 0.0;
 
     % MAX_SHARE_MEAS = 500;
     % DELTA_RANGE = 0.0;
