@@ -3,7 +3,7 @@ function [x_hat, P, x_common, P_common, ledger, x_hats, Ps, explicit_cnt, implic
                         w_perceived_modem_azimuth, w_perceived_sonar_range, w_perceived_sonar_azimuth, ...
                         q_perceived_tracking, STATES, TRACK_STATES, agent, x_common, P_common, ledger, last_share_index,...
                         delta_range, delta_azimuth, max_num_meas, x_navs_history, P_navs_history, x_hat_history, P_history, ...
-                        explicit_cnt, implicit_cnt)
+                        explicit_cnt, implicit_cnt, MODEM_LOCATION)
     
     % x_hat, P needed for modem measurement sharing
     % x_common, P_common, ledger, x_hats, Ps needed for sharing of measurements
@@ -23,7 +23,7 @@ function [x_hat, P, x_common, P_common, ledger, x_hats, Ps, explicit_cnt, implic
     % Surface broadcasts modem measurements
     if iter == ping_time
         % TODO add
-        [x_hat, P, ledger] = dt_filter_modem(x_hat, P, x_gt, w, w_perceived_modem_range, w_perceived_modem_azimuth, BLUE_NUM, STATES, TRACK_STATES, ledger, agent, loop_num);
+        [x_hat, P, ledger] = dt_filter_modem(x_hat, P, x_gt, w, w_perceived_modem_range, w_perceived_modem_azimuth, BLUE_NUM, STATES, TRACK_STATES, ledger, agent, loop_num, MODEM_LOCATION);
     else % Check if an agent is sharing
         x_common_debug = x_common;
         P_common_debug = P_common;
@@ -33,7 +33,7 @@ function [x_hat, P, x_common, P_common, ledger, x_hats, Ps, explicit_cnt, implic
             [x_common_debug, P_common_debug, mult, share_buffer, new_explicit_cnt, new_implicit_cnt] = pull_buffer( ...
                             last_share_index, loop_num, x_common, P_common, ledger, delta_range, delta_azimuth, ...
                             max_num_meas, agent, q_perceived_tracking, w_perceived_modem_range, ...
-                            w_perceived_modem_azimuth, w_perceived_sonar_range, w_perceived_sonar_azimuth, NUM_AGENTS);
+                            w_perceived_modem_azimuth, w_perceived_sonar_range, w_perceived_sonar_azimuth, NUM_AGENTS, MODEM_LOCATION);
             explicit_cnt = explicit_cnt + new_explicit_cnt;
             implicit_cnt = implicit_cnt + new_implicit_cnt;
             % print_buffer_stats(share_buffer)
@@ -65,7 +65,7 @@ function [x_hat, P, x_common, P_common, ledger, x_hats, Ps, explicit_cnt, implic
                             x_common, P_common, b, NUM_AGENTS, q_perceived_tracking, ...
                             delta_range, delta_azimuth, STATES, x_nav_history_b, P_nav_history_b, ...
                             w_perceived_modem_range, w_perceived_modem_azimuth, w_perceived_sonar_range, ...
-                            w_perceived_sonar_azimuth);
+                            w_perceived_sonar_azimuth, MODEM_LOCATION);
                 % assert(isequal(x_common_debug, x_common_debug2));
                 % assert(isequal(P_common_debug, P_common_debug2));
 

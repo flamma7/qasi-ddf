@@ -32,18 +32,19 @@ function [] = qasi_ddf(mc_run_num)
     TRACK_STATES = 4 * NUM_AGENTS; % x,y,x_dot, y_dot for each agent
     TOTAL_STATES = STATES * NUM_AGENTS; 
     TOTAL_TRACK_STATES = TRACK_STATES * BLUE_NUM;
-    NUM_LOOPS = 1000; % 643
+    NUM_LOOPS = 2000; % 643
     MAP_DIM = 20; % Square with side length
     PROB_DETECTION = 0.8;
     SONAR_RANGE = 10.0;
+    MODEM_LOCATION = [11,11]';
 
-    % MAX_SHARE_MEAS = 20;
-    % DELTA_RANGE = 0.3;
-    % DELTA_AZIMUTH = 0.03;
+    MAX_SHARE_MEAS = 20;
+    DELTA_RANGE = 0.3;
+    DELTA_AZIMUTH = 0.03;
 
-    MAX_SHARE_MEAS = 500;
-    DELTA_RANGE = 0.0;
-    DELTA_AZIMUTH = 0.0;
+    % MAX_SHARE_MEAS = 500;
+    % DELTA_RANGE = 0.0;
+    % DELTA_AZIMUTH = 0.0;
 
     implicit_cnt = 0;
     explicit_cnt = 0;
@@ -66,10 +67,10 @@ function [] = qasi_ddf(mc_run_num)
     % Let's just tune with sonars for now
     q_perceived_tracking = 0.05;
     w_perceived_nonlinear = 0.2;
-    w_perceived_modem_range = w_perceived_nonlinear;
+    w_perceived_modem_range = 0.1;
     w_perceived_modem_azimuth = w_perceived_nonlinear;
 
-    w_perceived_sonar_range = w_perceived_nonlinear;
+    w_perceived_sonar_range = 0.1;
     w_perceived_sonar_azimuth = w_perceived_nonlinear;
 
     Q = eye(TOTAL_STATES);
@@ -174,10 +175,7 @@ function [] = qasi_ddf(mc_run_num)
             [x_hat, P] = propagate(x_hat, P, NUM_AGENTS, q_perceived_tracking); % Scale the process noise to account for nonlinearities
             % TRACKING FILTER CORRECTION
             % TODO add
-            [x_hat, P, ledger] = dt_filter_sonar(x_hat, P, x_gt, w, w_perceived_sonar_range, w_perceived_sonar_azimuth, NUM_AGENTS, STATES, PROB_DETECTION, SONAR_RANGE, a, x_nav, ledger, loop_num);
-
-            % INTERSECT TRACK & NAV FILTER
-            [x_nav, P_nav, x_hat, P] = intersect_estimates(x_nav, P_nav, x_hat, P, a, STATES); % TODO add
+            [x_hat, P, ledger] = dt_filter_sonar(x_hat, P, x_gt, w, w_perceived_sonar_range, w_perceived_sonar_azimuth, NUM_AGENTS, STATES, PROB_DETECTION, SONAR_RANGE, a, x_nav, ledger, loop_num, BLUE_NUM);
 
             % SAVE ESTIMATES
             [x_hats, Ps] = set_estimate(x_hats, Ps, x_hat, P, a);
@@ -200,17 +198,21 @@ function [] = qasi_ddf(mc_run_num)
                                     w_perceived_modem_range, w_perceived_modem_azimuth, w_perceived_sonar_range, w_perceived_sonar_azimuth,...
                                     q_perceived_tracking, STATES, TRACK_STATES, a, x_common, P_common, ledger, last_index,...
                                     DELTA_RANGE, DELTA_AZIMUTH, MAX_SHARE_MEAS, x_navs_history, P_navs_history, x_hat_history, P_history, ...
-                                    explicit_cnt, implicit_cnt);
+                                    explicit_cnt, implicit_cnt, MODEM_LOCATION);
             [x_hats, Ps] = set_estimate(x_hats, Ps, x_hat, P, a);
 
             
         end
-        explicit_cnt
-        implicit_cnt
 
-        % For recording the final state
+        % Intersect with strapdown and record the final state
         for a = 1:BLUE_NUM 
+            % INTERSECT TRACK & NAV FILTER
+            [x_nav, P_nav] = get_estimate_nav(x_navs, P_navs, STATES, a);
             [x_hat, P] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, a);
+            [x_nav, P_nav, x_hat, P] = intersect_estimates(x_nav, P_nav, x_hat, P, a, STATES);
+            [x_hats, Ps] = set_estimate(x_hats, Ps, x_hat, P, a);
+            [x_navs, P_navs] = set_estimate(x_navs, P_navs, x_nav, P_nav, a);
+            
             x_hat_history(TRACK_STATES*(a-1)+1:TRACK_STATES*a, loop_num) = x_hat;
             P_history(TRACK_STATES*(a-1)+1:TRACK_STATES*a, TRACK_STATES*(loop_num-1)+1 : TRACK_STATES*loop_num) = P;
             track_error = get_error(x_gt, x_hat, NUM_AGENTS, STATES);
@@ -221,7 +223,7 @@ function [] = qasi_ddf(mc_run_num)
         common_error_history = [common_error_history, common_error];
         common_P_history = [common_P_history, P_common];
 
-        loop_num = loop_num + 1
+        loop_num = loop_num + 1;
     end
     ledger;
 
@@ -236,15 +238,20 @@ function [] = qasi_ddf(mc_run_num)
     error = ts2a * (x_gt_history - x_nav_history);
     error = normalize_state(error, 1, STATES);
     % P_nav_history_agent = ts2a * P_nav_history;
-    plot_error_nav(error, P_nav_history, NUM_LOOPS, STATES, AGENT_TO_PLOT);
+    % plot_error_nav(error, P_nav_history, NUM_LOOPS, STATES, AGENT_TO_PLOT);
     %plot_norm_error(error);
 
-    plot_error(x_hat_error_history, P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_AGENTS, BLUE_NUM, AGENT_TO_PLOT, "Tracking");
+    plot_error(x_hat_error_history, P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_AGENTS, BLUE_NUM, 1, "1's Tracking");
+    % plot_error(x_hat_error_history, P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_AGENTS, BLUE_NUM, 2, "2's Tracking");
 
-    plot_error(common_error_history, common_P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_AGENTS, BLUE_NUM, 1, "Common");
+    % plot_error(common_error_history, common_P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_AGENTS, BLUE_NUM, 1, "Common");
 
     % Make animation
     % make_animation_nav(STATES, NUM_AGENTS, MAP_DIM, NUM_LOOPS, x_gt_history, x_nav_history, P_nav_history);
+
+    explicit_cnt
+    implicit_cnt
+    proportion = implicit_cnt / (explicit_cnt + implicit_cnt)
 
     if SAVE_FILE
         filename = "monte_carlos/" + CONFIGURATION + "_" + mc_run_num + "_x";
@@ -253,9 +260,5 @@ function [] = qasi_ddf(mc_run_num)
         filename = "monte_carlos/" + CONFIGURATION + "_" + mc_run_num + "_P";
         writematrix(P_history, filename);
     end
-
-    explicit_cnt
-    implicit_cnt
-    proportion = implicit_cnt / (explicit_cnt + implicit_cnt)
-
+    saveas(gcf,'debug_images/last.png')
 end

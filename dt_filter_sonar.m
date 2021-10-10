@@ -1,4 +1,4 @@
-function [x_hat, P, ledger] = dt_filter_sonar(x_hat, P, x_gt, w, w_perceived_sonar_range, w_perceived_sonar_azimuth, NUM_AGENTS, STATES, prob_detection, sonar_dist, agent, x_nav, ledger, index)
+function [x_hat, P, ledger] = dt_filter_sonar(x_hat, P, x_gt, w, w_perceived_sonar_range, w_perceived_sonar_azimuth, NUM_AGENTS, STATES, prob_detection, sonar_dist, agent, x_nav, ledger, index, BLUE_NUM)
 
     TOTAL_STATES = STATES * NUM_AGENTS;
 
@@ -27,16 +27,50 @@ function [x_hat, P, ledger] = dt_filter_sonar(x_hat, P, x_gt, w, w_perceived_son
             [pred_range, C_range] = predict_range(x_hat, start_x1, start_x2);
 
             % Splitting up to compare results
+            x_hat_prior = x_hat;
             innovation = rel_range_meas - pred_range;
             K = P * C_range' * inv(C_range * P * C_range' + w_perceived_sonar_range);
             x_hat = x_hat + K * innovation;
             P = P - K*C_range*P;
 
+            % z = zeros(4*BLUE_NUM, 4*NUM_AGENTS);
+            % z(1:4*BLUE_NUM, 1:4*BLUE_NUM) = eye(4*BLUE_NUM);
+            % delta = z * abs(x_hat - x_hat_prior);
+            % if sum(delta > 10) > 0
+            %     disp("sonar range")
+            %     agent
+            %     x_hat_prior
+            %     x_hat
+            %     rel_range_meas
+            %     pred_range
+            %     K
+            %     P
+            %     assert(0)
+            % end
+
+            x_hat_prior = x_hat;
             [pred_azimuth, C_azimuth] = predict_azimuth(x_hat, start_x1, start_x2);
-            innovation = rel_azimuth_meas - pred_azimuth;
+            innovation = normalize_angle( rel_azimuth_meas - pred_azimuth );
             K = P * C_azimuth' * inv(C_azimuth * P * C_azimuth' + w_perceived_sonar_azimuth);
             x_hat = x_hat + K * innovation;
             P = P - K*C_azimuth*P;
+
+            % z = zeros(4*BLUE_NUM, 4*NUM_AGENTS);
+            % z(1:4*BLUE_NUM, 1:4*BLUE_NUM) = eye(4*BLUE_NUM);
+            % delta = z * abs(x_hat - x_hat_prior);
+            % if sum(delta > 10) > 0
+            %     disp("sonar az")
+            %     agent
+            %     b
+            %     x_hat_prior
+            %     x_hat
+            %     rel_azimuth_meas
+            %     pred_azimuth
+            %     innovation
+            %     K
+            %     P
+            %     assert(0)
+            % end
 
             % meas = [pred_range; pred_azimuth];
             % innovation = [rel_range_meas; rel_azimuth_meas] - meas;

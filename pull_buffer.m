@@ -2,10 +2,9 @@ function [x_common_debug, P_common_debug, mult, share_buffer, explicit_cnt, impl
                                                                     start_index, last_index, x_common, P_common, ledger, delta_range, delta_azimuth, ...
                                                                     max_num_meas, agent, q_perceived_tracking, w_perceived_modem_range, ...
                                                                     w_perceived_modem_azimuth, w_perceived_sonar_range, w_perceived_sonar_azimuth, ...
-                                                                    NUM_AGENTS )
+                                                                    NUM_AGENTS, MODEM_LOCATION )
 
     % Use bisection search to select the optimal delta-multiplier for sharing measurements
-
     % Start index should be the last time an agent shared
     % last index should be the current loop number
     meas_types = ["modem_range", "modem_azimuth", "sonar_range", "sonar_azimuth", "sonar_range_implicit", "sonar_azimuth_implicit"];
@@ -52,7 +51,7 @@ function [x_common_debug, P_common_debug, mult, share_buffer, explicit_cnt, impl
                 data = meas(data_col);
                 
                 if meas_type == "modem_range" % ALWAYS SHARE EXPLICITLY (it's already been shared)
-                    [pred, C] = predict_range_modem(x_common, start_x1);
+                    [pred, C] = predict_range_modem(x_common, start_x1, MODEM_LOCATION);
                     innovation = data - pred;
                     K = P_common * C' * inv(C * P_common * C' + w_perceived_modem_range);
                     x_common = x_common + K * innovation;
@@ -60,7 +59,7 @@ function [x_common_debug, P_common_debug, mult, share_buffer, explicit_cnt, impl
                     share_buffer = add_meas(share_buffer, agent, "modem_range", index, start_x1, start_x2, data);
 
                 elseif meas_type == "modem_azimuth" % ALWAYS SHARE EXPLICITLY (it's already been shared)
-                    [pred, C] = predict_azimuth_modem(x_common, start_x1);
+                    [pred, C] = predict_azimuth_modem(x_common, start_x1, MODEM_LOCATION);
                     innovation = normalize_angle( data - pred );
                     K = P_common * C' * inv(C * P_common * C' + w_perceived_modem_azimuth);
                     x_common = x_common + K * innovation;

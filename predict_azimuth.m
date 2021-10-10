@@ -1,4 +1,4 @@
-function [pred, C] = predict_range(x_hat, start_x1, start_x2)
+function [pred, C] = predict_azimuth(x_hat, start_x1, start_x2)
 
     x1 = x_hat(start_x1,1);
     y1 = x_hat(start_x1+1,1);

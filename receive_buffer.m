@@ -3,7 +3,7 @@ function [x_hat, P, x_common_debug, P_common_debug] = receive_buffer( ...
                             x_common, P_common, agent, NUM_AGENTS, q_perceived_tracking, ...
                             delta_range, delta_azimuth, STATES, x_nav_history, P_nav_history, ...
                             w_perceived_modem_range, w_perceived_modem_azimuth, w_perceived_sonar_range, ...
-                            w_perceived_sonar_azimuth)
+                            w_perceived_sonar_azimuth, MODEM_LOCATION)
 
     meas_types = ["modem_range", "modem_azimuth", "sonar_range", "sonar_azimuth", "sonar_range_implicit", "sonar_azimuth_implicit"];
     meas_columns = ["type", "index", "start_x1", "start_x2", "data"];
@@ -16,11 +16,9 @@ function [x_hat, P, x_common_debug, P_common_debug] = receive_buffer( ...
     x_hat = last_x_hat;
     P = last_P;
     agent_ledger = get_ledger(ledger, agent);
-    x_hat_history = []; % TODO rem
 
-    disp("Agent " + int2str(agent) + " receiving buffer from " + int2str(start_index) + " to " + int2str(last_index));
+    % disp("Agent " + int2str(agent) + " receiving buffer from " + int2str(start_index) + " to " + int2str(last_index));
     for index = start_index : last_index
-        x_hat_history = [x_hat_history, x_hat]; % TODO rem
         % PREDICTION COMMON
         [x_common, P_common] = propagate(x_common, P_common, NUM_AGENTS, q_perceived_tracking);
         x_common_bar = x_common;
@@ -42,7 +40,7 @@ function [x_hat, P, x_common_debug, P_common_debug] = receive_buffer( ...
             data = meas(data_col);
             
             if meas_type == "modem_range"
-                [pred, C] = predict_range_modem(x_common, start_x1);
+                [pred, C] = predict_range_modem(x_common, start_x1, MODEM_LOCATION);
                 innovation = data - pred;
                 K = P_common * C' * inv(C * P_common * C' + w_perceived_modem_range);
                 x_common = x_common + K * innovation;
@@ -51,7 +49,7 @@ function [x_hat, P, x_common_debug, P_common_debug] = receive_buffer( ...
                 % DON'T FUSE WITH MAIN, ITS LEDGER ALREADY HAS THIS MEAS
 
             elseif meas_type == "modem_azimuth" % ALWAYS SHARE EXPLICITLY (it's already been shared)
-                [pred, C] = predict_azimuth_modem(x_common, start_x1);
+                [pred, C] = predict_azimuth_modem(x_common, start_x1, MODEM_LOCATION);
                 innovation = normalize_angle( data - pred );
                 K = P_common * C' * inv(C * P_common * C' + w_perceived_modem_azimuth);
                 x_common = x_common + K * innovation;
@@ -162,14 +160,14 @@ function [x_hat, P, x_common_debug, P_common_debug] = receive_buffer( ...
             data = meas(data_col);
 
             if meas_type == "modem_range"
-                [pred, C] = predict_range_modem(x_hat, start_x1);
+                [pred, C] = predict_range_modem(x_hat, start_x1, MODEM_LOCATION);
                 innovation = data - pred;
                 K = P * C' * inv(C * P * C' + w_perceived_modem_range);
                 x_hat = x_hat + K * innovation;
                 P = P - K*C*P;
 
             elseif meas_type == "modem_azimuth" % ALWAYS SHARE EXPLICITLY (it's already been shared)
-                [pred, C] = predict_azimuth_modem(x_hat, start_x1);
+                [pred, C] = predict_azimuth_modem(x_hat, start_x1, MODEM_LOCATION);
                 innovation = normalize_angle( data - pred );
                 K = P * C' * inv(C * P * C' + w_perceived_modem_azimuth);
                 x_hat = x_hat + K * innovation;
@@ -202,8 +200,6 @@ function [x_hat, P, x_common_debug, P_common_debug] = receive_buffer( ...
             [x_nav_, P_nav_, x_hat, P] = intersect_estimates(x_nav, P_nav, x_hat, P, agent, STATES); % TODO add
         end
     end 
-    x_hat_history = [x_hat_history, x_hat];
-    % x_hat_history % TODO rem
     x_common_debug = x_common;
     P_common_debug = P_common;
 end                            
