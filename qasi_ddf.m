@@ -22,7 +22,7 @@ function [] = qasi_ddf(mc_run_num)
         SAVE_FILE = true;
     end
 
-    CONFIGURATION = "CI";
+    CONFIGURATION = "DT";
     
     % Initialize
     BLUE_NUM = 2; % Blue agents come first in the state vector
@@ -259,6 +259,9 @@ function [] = qasi_ddf(mc_run_num)
 
         filename = "monte_carlos/" + CONFIGURATION + "_" + mc_run_num + "_P";
         writematrix(P_history, filename);
+
+        filename = "monte_carlos/" + CONFIGURATION + "_" + mc_run_num + "_meas_cnts";
+        writematrix([explicit_cnt, implicit_cnt, proportion], filename);
     end
     saveas(gcf,'debug_images/last.png')
 end
