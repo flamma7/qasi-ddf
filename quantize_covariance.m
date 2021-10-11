@@ -1,5 +1,8 @@
 function [new_x_hat, new_P] = quantize_Covariance(x_hat, P, NUM_AGENTS)
 
+    % TODO rethink what to do with red agent estimates and off-diagonals that may be larger than our bounds, OR increase them...
+    % That's what happens in nonlinear environment
+
     n = size(x_hat,1);
     new_x_hat = zeros(size(x_hat));
     new_P = P;
@@ -92,9 +95,46 @@ function [new_x_hat, new_P] = quantize_Covariance(x_hat, P, NUM_AGENTS)
     % P QUANTIZATION
 
     b = 8;
-    k = 1:2^b;
+    k = 1:255;
     delta_not = P_max / 2^(b-1);
     delta_d = (P_max + (n-1)*delta_not/2) / (2^b - 1);
 
-    codebook_off = P_max - k*delta_not;
-    codebook_diag = P_max + (n-1)*delta_not/2 - k*delta_d;
+    codebook_off = flip( P_max - k*delta_not );
+    codebook_diag = flip( P_max + (n-1)*delta_not/2 - k*delta_d );
+
+    % Just off-diagonals
+    e = eye(n);
+    diag_indices = find(e(:) == 1);
+    vectorized_P = P(:);
+    new_P = zeros(size(P(:)));
+    for i = 1:length(vectorized_P)
+        if ismember(i, diag_indices)
+            continue
+        end
+
+        element = vectorized_P(i);
+        [minValue,closestIndex] = min(abs(element - codebook_off));
+        closestValue = codebook_off(closestIndex);
+        
+        new_P(i) = closestValue;
+    end
+
+    % Just diagonals
+    for i = 1:length(vectorized_P)
+        if ismember(i, diag_indices)
+            row = floor(i / n);
+            start_element = n*row+1;
+            end_element = n*(row+1);
+            start_element
+            end_element
+            diff = sum( abs(vectorized_P(start_element:end_element) - new_P(start_element:end_element)) );
+            vals = find( codebook_diag > diff );
+
+            if length(vals) == 0
+                vals = [length(codebook_diag)];
+            end
+            first_val = vals(1);
+            new_P(i) = codebook_diag(first_val);
+        end
+    end
+end
