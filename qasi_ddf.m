@@ -22,7 +22,7 @@ function [] = qasi_ddf(mc_run_num)
         SAVE_FILE = true;
     end
 
-    CONFIGURATION = "OMNI";
+    CONFIGURATION = "CI";
     
     % Initialize
     BLUE_NUM = 2; % Blue agents come first in the state vector
