@@ -249,7 +249,7 @@ function [] = qasi_ddf(mc_run_num)
     % plot_error_nav(error, P_nav_history, NUM_LOOPS, STATES, AGENT_TO_PLOT);
     %plot_norm_error(error);
 
-    plot_error(x_hat_error_history, P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_AGENTS, BLUE_NUM, 1, "1's Tracking");
+    % plot_error(x_hat_error_history, P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_AGENTS, BLUE_NUM, 1, "1's Tracking");
     % plot_error(x_hat_error_history, P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_AGENTS, BLUE_NUM, 2, "2's Tracking");
 
     % plot_error(common_error_history, common_P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_AGENTS, BLUE_NUM, 1, "Common");
@@ -271,5 +271,5 @@ function [] = qasi_ddf(mc_run_num)
         filename = "monte_carlos/" + CONFIGURATION + "_" + mc_run_num + "_meas_cnts";
         writematrix([explicit_cnt, implicit_cnt, proportion], filename);
     end
-    saveas(gcf,'debug_images/last.png')
+    % saveas(gcf,'debug_images/last.png')
 end
