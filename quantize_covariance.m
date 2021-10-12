@@ -1,4 +1,4 @@
-function [new_x_hat, new_P] = quantize_Covariance(x_hat, P, NUM_AGENTS)
+function [new_x_hat, new_P] = quantize_covariance(x_hat, P, NUM_AGENTS)
 
     % TODO rethink what to do with red agent estimates and off-diagonals that may be larger than our bounds, OR increase them...
     % That's what happens in nonlinear environment
@@ -10,6 +10,7 @@ function [new_x_hat, new_P] = quantize_Covariance(x_hat, P, NUM_AGENTS)
     pos_max = 11;
     vel_max = 1.0;
     P_max = 40;
+    b = 4;
 
     % POSITION STATES
     get_pos = zeros(2*NUM_AGENTS, 4*NUM_AGENTS);
@@ -18,17 +19,18 @@ function [new_x_hat, new_P] = quantize_Covariance(x_hat, P, NUM_AGENTS)
     end
     pos_states = get_pos * x_hat;
 
-    b = 8;
     delta_s = pos_max / 2^(b-1);
-    k = 1:2^b;
+    k = 0:2^b-1;
     codebook = flip(pos_max - k*delta_s);
+    position_codebook = codebook;
     for s = 1:length(pos_states)
         state = pos_states(s);
         up_indices = find( codebook > state);
 
         % Check that at least one was greater
         if length(up_indices) < 1
-            up_index = codebook(end);
+            up_index = length(codebook);
+            state = codebook(up_index);
         else
             up_index = up_indices(1);
         end
@@ -49,7 +51,7 @@ function [new_x_hat, new_P] = quantize_Covariance(x_hat, P, NUM_AGENTS)
 
     new_x_hat = new_x_hat + get_pos' * pos_states;
     pos_states = sum(get_pos', 2);
-    P = P + eye(n) .* pos_states * delta_s;
+    P = P + eye(n) .* pos_states * delta_s^2;
 
     % VELOCITY STATES
     get_vel = zeros(2*NUM_AGENTS, 4*NUM_AGENTS);
@@ -58,25 +60,25 @@ function [new_x_hat, new_P] = quantize_Covariance(x_hat, P, NUM_AGENTS)
     end
     vel_states = get_vel * x_hat;
 
-    b = 8;
     delta_s = vel_max / 2^(b-1);
-    k = 1:2^b;
+    k = 0:2^b-1;
     codebook = flip( vel_max - k*delta_s );
+    velocity_codebook = codebook;
     for s = 1:length(vel_states)
         state = vel_states(s);
         up_indices = find( codebook > state);
 
         % Check that at least one was greater
         if length(up_indices) < 1
-            disp("Velocity greater than compression bounds!");
-            up_index = codebook(end);
+            up_index = length(codebook);
+            state = codebook(up_index);
         else
             up_index = up_indices(1);
         end
 
         % Check that 
         if up_index == 1
-            state = codebook(1)
+            x = codebook(1);
         else
             x_down_prob = ( codebook(up_index) - state) / delta_s;
             if binornd(1, x_down_prob)
@@ -88,14 +90,13 @@ function [new_x_hat, new_P] = quantize_Covariance(x_hat, P, NUM_AGENTS)
         vel_states(s) = x;
     end
 
-    new_x_hat = new_x_hat + get_vel' * vel_states
+    new_x_hat = new_x_hat + get_vel' * vel_states;
     vel_states = sum(get_vel', 2);
-    P = P + eye(n) .* vel_states * delta_s
+    P = P + eye(n) .* vel_states * delta_s^2;
 
     % P QUANTIZATION
 
-    b = 8;
-    k = 1:255;
+    k = 0:2^b-1;
     delta_not = P_max / 2^(b-1);
     delta_d = (P_max + (n-1)*delta_not/2) / (2^b - 1);
 
@@ -141,8 +142,6 @@ function [new_x_hat, new_P] = quantize_Covariance(x_hat, P, NUM_AGENTS)
             row = floor(i / n);
             start_element = n*row+1;
             end_element = n*(row+1);
-            start_element
-            end_element
 
             vec_P_arr = vectorized_P(start_element:end_element);
             diff = sum( abs( vec_P_arr - new_P(start_element:end_element)) );
@@ -150,10 +149,16 @@ function [new_x_hat, new_P] = quantize_Covariance(x_hat, P, NUM_AGENTS)
 
             if length(vals) == 0
                 vals = [length(codebook_diag)];
+                codebook_diag
             end
             first_val = vals(1);
             new_P(i) = codebook_diag(first_val);
         end
     end
     new_P = reshape(new_P, n, n);
+
+    % position_codebook
+    % velocity_codebook
+    % codebook_off
+    % codebook_diag
 end
