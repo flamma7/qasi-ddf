@@ -30,7 +30,9 @@ function [x_hat, P, x_common, P_common, ledger, x_hats, Ps, explicit_cnt, implic
                 continue
             elseif agent_share_times(agent) == iter
                 [x_hat_b, P_b] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, b);
-                [x_hat, P] = covariance_intersect(x_hat, P, x_hat_b, P_b); % Intersect estimates
+                [x_hat_quant, P_quant] = quantize_covariance(x_hat, P, NUM_AGENTS);
+                [x_hat_b, P_b] = covariance_intersect(x_hat_quant, P_quant, x_hat_b, P_b); % Intersect estimates
+                [x_hats, Ps] = set_estimate(x_hats, Ps, x_hat_b, P_b, b);
             end
             last_share_index = loop_num;
         end

@@ -35,7 +35,7 @@ function [] = qasi_ddf(mc_run_num)
     NUM_LOOPS = 2000; % 643
     MAP_DIM = 20; % Square with side length
     PROB_DETECTION = 0.8;
-    SONAR_RANGE = 10.0;
+    SONAR_RANGE = 40.0;
     MODEM_LOCATION = [11,11]';
 
     MAX_SHARE_MEAS = 2000;
@@ -102,7 +102,7 @@ function [] = qasi_ddf(mc_run_num)
     % DeltaTier (good trick: record all of the estimates and just index which one you want...)
     last_index = 1;
     meas_columns = ["type", "index", "start_x1", "start_x2", "data"];
-    ledger = zeros(3000, length(meas_columns) * BLUE_NUM);
+    ledger = zeros(10000, length(meas_columns) * BLUE_NUM);
 
     x_navs_history = zeros( size(x_navs,1), NUM_LOOPS); % each row is an agent's x_nav history
     P_navs_history = zeros( size(x_navs,1), STATES*NUM_LOOPS);
