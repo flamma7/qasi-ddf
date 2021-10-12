@@ -9,7 +9,7 @@ function [new_x_hat, new_P] = quantize_Covariance(x_hat, P, NUM_AGENTS)
 
     pos_max = 11;
     vel_max = 1.0;
-    P_max = 30;
+    P_max = 40;
 
     % POSITION STATES
     get_pos = zeros(2*NUM_AGENTS, 4*NUM_AGENTS);
@@ -107,6 +107,7 @@ function [new_x_hat, new_P] = quantize_Covariance(x_hat, P, NUM_AGENTS)
     diag_indices = find(e(:) == 1);
     vectorized_P = P(:);
     new_P = zeros(size(P(:)));
+
     for i = 1:length(vectorized_P)
         if ismember(i, diag_indices)
             continue
@@ -121,13 +122,30 @@ function [new_x_hat, new_P] = quantize_Covariance(x_hat, P, NUM_AGENTS)
 
     % Just diagonals
     for i = 1:length(vectorized_P)
-        if ismember(i, diag_indices)
+        if i == length(vectorized_P)
+            row = floor(i / n) - 1;
+            start_element = n*row+1;
+            end_element = n*(row+1);
+
+            vec_P_arr = vectorized_P(start_element:end_element);
+            diff = sum( abs( vec_P_arr - new_P(start_element:end_element)) );
+            vals = find( codebook_diag > diff );
+
+            if length(vals) == 0
+                vals = [length(codebook_diag)];
+            end
+            first_val = vals(1);
+            new_P(i) = codebook_diag(first_val);
+
+        elseif ismember(i, diag_indices)
             row = floor(i / n);
             start_element = n*row+1;
             end_element = n*(row+1);
             start_element
             end_element
-            diff = sum( abs(vectorized_P(start_element:end_element) - new_P(start_element:end_element)) );
+
+            vec_P_arr = vectorized_P(start_element:end_element);
+            diff = sum( abs( vec_P_arr - new_P(start_element:end_element)) );
             vals = find( codebook_diag > diff );
 
             if length(vals) == 0
@@ -137,4 +155,5 @@ function [new_x_hat, new_P] = quantize_Covariance(x_hat, P, NUM_AGENTS)
             new_P(i) = codebook_diag(first_val);
         end
     end
+    new_P = reshape(new_P, n, n);
 end
