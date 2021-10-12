@@ -111,31 +111,43 @@ figure(1);
 plot(ownship_error_dt);
 hold on
 plot(ownship_error_omni);
-plot(ownship_error_ci);
+plot(ownship_error_ci, "m");
 legend("DeltaTier", "Omniscient", "CI");
-title("Ownship Mean Norm Error vs time");
+title("Ownship Mean Norm Error");
 xlabel("Time Step");
 ylabel("Mean Norm Error");
+ax = gca;
+ax.TitleFontSizeMultiplier = 2;
+ax = gca;
+ax.FontSize = 28;
 saveas(gcf,filename + "_ownship.png")
 
 figure(2);
 plot(blue_error_dt);
 hold on
 plot(blue_error_omni);
-plot(blue_error_ci);
+plot(blue_error_ci, "m");
 legend("DeltaTier", "Omniscient", "CI");
-title("Blue Team Mean Norm Error vs time");
+title("Blue Team Mean Norm Error");
 xlabel("Time Step");
 ylabel("Mean Norm Error");
+ax = gca;
+ax.TitleFontSizeMultiplier = 2;
+ax = gca;
+ax.FontSize = 28;
 saveas(gcf,filename + "_blue.png")
 
 figure(3);
 plot(red_error_dt);
 hold on
 plot(red_error_omni);
-plot(red_error_ci);
+plot(red_error_ci, "m");
 legend("DeltaTier", "Omniscient", "CI");
-title("Red Agent Mean Norm Error vs time");
+title("Red Agent Mean Norm Error");
 xlabel("Time Step");
 ylabel("Mean Norm Error");
+ax = gca;
+ax.TitleFontSizeMultiplier = 2;
+ax = gca;
+ax.FontSize = 28;
 saveas(gcf,filename + "_red.png")
