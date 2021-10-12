@@ -25,16 +25,16 @@ function [x_hat, P, x_common, P_common, ledger, x_hats, Ps, explicit_cnt, implic
         % TODO add
         [x_hat, P, ledger] = dt_filter_modem(x_hat, P, x_gt, w, w_perceived_modem_range, w_perceived_modem_azimuth, BLUE_NUM, STATES, TRACK_STATES, ledger, agent, loop_num, MODEM_LOCATION);
     else % Check if an agent is sharing
-        for b = 1:BLUE_NUM
-            if b == agent
-                continue
-            elseif agent_share_times(agent) == iter
-                [x_hat_b, P_b] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, b);
-                [x_hat_quant, P_quant] = quantize_covariance(x_hat, P, NUM_AGENTS);
-                [x_hat_b, P_b] = covariance_intersect(x_hat_quant, P_quant, x_hat_b, P_b); % Intersect estimates
-                [x_hats, Ps] = set_estimate(x_hats, Ps, x_hat_b, P_b, b);
-            end
-            last_share_index = loop_num;
-        end
+        % for b = 1:BLUE_NUM
+        %     if b == agent
+        %         continue
+        %     elseif agent_share_times(agent) == iter
+        %         [x_hat_b, P_b] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, b);
+        %         [x_hat_quant, P_quant] = quantize_covariance(x_hat, P, NUM_AGENTS);
+        %         [x_hat_b, P_b] = covariance_intersect(x_hat_quant, P_quant, x_hat_b, P_b); % Intersect estimates
+        %         [x_hats, Ps] = set_estimate(x_hats, Ps, x_hat_b, P_b, b);
+        %     end
+        %     last_share_index = loop_num;
+        % end
     end % else
 end % fxn

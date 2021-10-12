@@ -22,7 +22,7 @@ function [] = qasi_ddf(mc_run_num)
         SAVE_FILE = true;
     end
 
-    CONFIGURATION = "CI";
+    CONFIGURATION = "OMNI";
     
     % Initialize
     BLUE_NUM = 2; % Blue agents come first in the state vector
@@ -32,10 +32,10 @@ function [] = qasi_ddf(mc_run_num)
     TRACK_STATES = 4 * NUM_AGENTS; % x,y,x_dot, y_dot for each agent
     TOTAL_STATES = STATES * NUM_AGENTS; 
     TOTAL_TRACK_STATES = TRACK_STATES * BLUE_NUM;
-    NUM_LOOPS = 2000; % 643
+    NUM_LOOPS = 2000;
     MAP_DIM = 20; % Square with side length
     PROB_DETECTION = 0.8;
-    SONAR_RANGE = 10.0;
+    SONAR_RANGE = 20.0;
     MODEM_LOCATION = [11,11]';
 
     MAX_SHARE_MEAS = 2000;
@@ -98,6 +98,8 @@ function [] = qasi_ddf(mc_run_num)
     % I should create a block diagonal matrix to get initial positions from x_gt
     [x_hats, Ps] = initialize_x_hats(x_gt, P, NUM_AGENTS, STATES, BLUE_NUM);
     [x_common, P_common] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, 1); % copy the initial estimate
+    the_x_hat = x_common;
+    the_P = P_common;
 
     % DeltaTier (good trick: record all of the estimates and just index which one you want...)
     last_index = 1;
@@ -139,7 +141,7 @@ function [] = qasi_ddf(mc_run_num)
         % Adjust red waypoint to follow an agent
         if RED_NUM > 0
             for i=BLUE_NUM+1:BLUE_NUM + RED_NUM
-                waypoint = get_red_agent_waypoint(x_gt, 1, 1.0, 1.0, STATES);
+                waypoint = get_red_agent_waypoint(x_gt, 1, 0.0, 0.0, STATES);
                 waypoints(2*(i-1)+1 : 2*(i-1)+2) = waypoint;
             end
         end
@@ -160,6 +162,8 @@ function [] = qasi_ddf(mc_run_num)
         x_gt = normalize_state(x_gt, NUM_AGENTS, STATES);
         x_gt_history(:,loop_num) = x_gt;
 
+        [the_x_hat, the_P] = propagate(the_x_hat, the_P, NUM_AGENTS, q_perceived_tracking); % Scale the process noise to account for nonlinearities
+
         for a = 1:BLUE_NUM
 
             %% NAVIGATION FILTER PREDICTION
@@ -177,16 +181,17 @@ function [] = qasi_ddf(mc_run_num)
             % Record history for plotting
             [x_navs_history, P_navs_history] = set_estimate_nav_history(x_navs_history, P_navs_history, x_nav, P_nav, STATES, a, loop_num);
 
-            %% TRACKING FILTER PREDICTION
-            [x_hat, P] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, a);
+            % TRACKING FILTER PREDICTION
+            x_hat = the_x_hat;
+            P = the_P;
 
-            [x_hat, P] = propagate(x_hat, P, NUM_AGENTS, q_perceived_tracking); % Scale the process noise to account for nonlinearities
+            % [x_hat, P] = propagate(x_hat, P, NUM_AGENTS, q_perceived_tracking); % Scale the process noise to account for nonlinearities
             % TRACKING FILTER CORRECTION
             % TODO add
-            [x_hat, P, ledger] = dt_filter_sonar(x_hat, P, x_gt, w, w_perceived_sonar_range, w_perceived_sonar_azimuth, NUM_AGENTS, STATES, PROB_DETECTION, SONAR_RANGE, a, x_nav, ledger, loop_num, BLUE_NUM);
+            [the_x_hat, the_P, ledger] = dt_filter_sonar(the_x_hat, the_P, x_gt, w, w_perceived_sonar_range, w_perceived_sonar_azimuth, NUM_AGENTS, STATES, PROB_DETECTION, SONAR_RANGE, a, x_nav, ledger, loop_num, BLUE_NUM);
 
             % SAVE ESTIMATES
-            [x_hats, Ps] = set_estimate(x_hats, Ps, x_hat, P, a);
+            % [x_hats, Ps] = set_estimate(x_hats, Ps, x_hat, P, a);
             [x_navs, P_navs] = set_estimate(x_navs, P_navs, x_nav, P_nav, a);
 
             % Record here once for use with modem sharing
@@ -199,30 +204,34 @@ function [] = qasi_ddf(mc_run_num)
         end
 
         % MODEM SHARING & ERROR RECORDING
-        for a = 1:BLUE_NUM
-            [x_hat, P] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, a);
-            [x_hat, P, x_common, P_common, ledger, x_hats, Ps, explicit_cnt, implicit_cnt, last_index] = dt_modem_schedule(...
-                                    BLUE_NUM, NUM_AGENTS, loop_num, x_hat, P, x_hats, Ps, x_gt, w, ...
-                                    w_perceived_modem_range, w_perceived_modem_azimuth, w_perceived_sonar_range, w_perceived_sonar_azimuth,...
-                                    q_perceived_tracking, STATES, TRACK_STATES, a, x_common, P_common, ledger, last_index,...
-                                    DELTA_RANGE, DELTA_AZIMUTH, MAX_SHARE_MEAS, x_navs_history, P_navs_history, x_hat_history, P_history, ...
-                                    explicit_cnt, implicit_cnt, MODEM_LOCATION);
-            [x_hats, Ps] = set_estimate(x_hats, Ps, x_hat, P, a);
-
-            
-        end
+        % for a = 1:BLUE_NUM
+        %     [x_hat, P] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, a);
+        %     [the_x_hat, the_P, x_common, P_common, ledger, x_hats, Ps, explicit_cnt, implicit_cnt, last_index] = dt_modem_schedule(...
+        %                             BLUE_NUM, NUM_AGENTS, loop_num, the_x_hat, the_P, x_hats, Ps, x_gt, w, ...
+        %                             w_perceived_modem_range, w_perceived_modem_azimuth, w_perceived_sonar_range, w_perceived_sonar_azimuth,...
+        %                             q_perceived_tracking, STATES, TRACK_STATES, a, x_common, P_common, ledger, last_index,...
+        %                             DELTA_RANGE, DELTA_AZIMUTH, MAX_SHARE_MEAS, x_navs_history, P_navs_history, x_hat_history, P_history, ...
+        %                             explicit_cnt, implicit_cnt, MODEM_LOCATION);
+        %     [x_hats, Ps] = set_estimate(x_hats, Ps, x_hat, P, a);
+        % end
+        [the_x_hat, the_P, x_common, P_common, ledger, x_hats, Ps, explicit_cnt, implicit_cnt, last_index] = dt_modem_schedule(...
+                        BLUE_NUM, NUM_AGENTS, loop_num, the_x_hat, the_P, x_hats, Ps, x_gt, w, ...
+                        w_perceived_modem_range, w_perceived_modem_azimuth, w_perceived_sonar_range, w_perceived_sonar_azimuth,...
+                        q_perceived_tracking, STATES, TRACK_STATES, a, x_common, P_common, ledger, last_index,...
+                        DELTA_RANGE, DELTA_AZIMUTH, MAX_SHARE_MEAS, x_navs_history, P_navs_history, x_hat_history, P_history, ...
+                        explicit_cnt, implicit_cnt, MODEM_LOCATION);
 
         % Intersect with strapdown and record the final state
         for a = 1:BLUE_NUM 
             % INTERSECT TRACK & NAV FILTER
             [x_nav, P_nav] = get_estimate_nav(x_navs, P_navs, STATES, a);
-            [x_hat, P] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, a);
-            [x_nav, P_nav, x_hat, P] = intersect_estimates(x_nav, P_nav, x_hat, P, a, STATES);
-            [x_hats, Ps] = set_estimate(x_hats, Ps, x_hat, P, a);
+            % [x_hat, P] = get_estimate(x_hats, Ps, 4, NUM_AGENTS, a);
+            [x_nav, P_nav, the_x_hat, the_P] = intersect_estimates(x_nav, P_nav, the_x_hat, the_P, a, STATES);
+            % [x_hats, Ps] = set_estimate(x_hats, Ps, x_hat, P, a);
             [x_navs, P_navs] = set_estimate(x_navs, P_navs, x_nav, P_nav, a);
             
-            x_hat_history(TRACK_STATES*(a-1)+1:TRACK_STATES*a, loop_num) = x_hat;
-            P_history(TRACK_STATES*(a-1)+1:TRACK_STATES*a, TRACK_STATES*(loop_num-1)+1 : TRACK_STATES*loop_num) = P;
+            x_hat_history(TRACK_STATES*(a-1)+1:TRACK_STATES*a, loop_num) = the_x_hat;
+            P_history(TRACK_STATES*(a-1)+1:TRACK_STATES*a, TRACK_STATES*(loop_num-1)+1 : TRACK_STATES*loop_num) = the_P;
             track_error = get_error(x_gt, x_hat, NUM_AGENTS, STATES);
             x_hat_error_history(TRACK_STATES*(a-1)+1:TRACK_STATES*a, loop_num) = track_error;
         end
