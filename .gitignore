@@ -3,3 +3,4 @@ notes.m
 test_covariance_plot.m
 monte_carlos
 debug_images
+*.png
