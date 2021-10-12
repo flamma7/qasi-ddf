@@ -135,6 +135,14 @@ function [] = qasi_ddf(mc_run_num)
             end
             
         end
+
+        % Adjust red waypoint to follow an agent
+        if RED_NUM > 0
+            for i=BLUE_NUM+1:BLUE_NUM + RED_NUM
+                waypoint = get_red_agent_waypoint(x_gt, 1, 0.0, 0.0, STATES);
+                waypoints(2*(i-1)+1 : 2*(i-1)+2) = waypoint;
+            end
+        end
         
         % Get control input
         accel = zeros(2*NUM_AGENTS,1);
