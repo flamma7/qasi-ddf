@@ -35,7 +35,7 @@ function [] = qasi_ddf(mc_run_num)
     NUM_LOOPS = 2000; % 643
     MAP_DIM = 20; % Square with side length
     PROB_DETECTION = 0.8;
-    SONAR_RANGE = 40.0;
+    SONAR_RANGE = 10.0;
     MODEM_LOCATION = [11,11]';
 
     MAX_SHARE_MEAS = 2000;
@@ -129,11 +129,19 @@ function [] = qasi_ddf(mc_run_num)
         % Calculate new waypoints
         for i = 1:NUM_AGENTS
             delta = waypoints(2*(i-1)+1 : 2*i) - x_gt(STATES*(i-1)+1:STATES*(i-1)+2,1);
+
             if norm(delta) < 1
                 waypoints(2*(i-1)+1 : 2*i) = randi(2*MAP_DIM, 2,1) - MAP_DIM;
                 % disp('reached!');
             end
-            
+        end
+
+        % Adjust red waypoint to follow an agent
+        if RED_NUM > 0
+            for i=BLUE_NUM+1:BLUE_NUM + RED_NUM
+                waypoint = get_red_agent_waypoint(x_gt, 1, 1.0, 1.0, STATES);
+                waypoints(2*(i-1)+1 : 2*(i-1)+2) = waypoint;
+            end
         end
         
         % Get control input

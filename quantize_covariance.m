@@ -149,7 +149,6 @@ function [new_x_hat, new_P] = quantize_covariance(x_hat, P, NUM_AGENTS)
 
             if length(vals) == 0
                 vals = [length(codebook_diag)];
-                codebook_diag
             end
             first_val = vals(1);
             new_P(i) = codebook_diag(first_val);
