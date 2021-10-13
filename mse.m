@@ -112,7 +112,7 @@ plot(ownship_error_dt);
 hold on
 plot(ownship_error_omni);
 plot(ownship_error_ci, "m");
-legend("DeltaTier", "Omniscient", "CI");
+legend("DeltaTier", "Omniscient", "QCI");
 title("Ownship Mean Norm Error");
 xlabel("Time Step");
 ylabel("Mean Norm Error");
@@ -127,7 +127,7 @@ plot(blue_error_dt);
 hold on
 plot(blue_error_omni);
 plot(blue_error_ci, "m");
-legend("DeltaTier", "Omniscient", "CI");
+legend("DeltaTier", "Omniscient", "QCI");
 title("Blue Team Mean Norm Error");
 xlabel("Time Step");
 ylabel("Mean Norm Error");
@@ -142,7 +142,7 @@ plot(red_error_dt);
 hold on
 plot(red_error_omni);
 plot(red_error_ci, "m");
-legend("DeltaTier", "Omniscient", "CI");
+legend("DeltaTier", "Omniscient", "QCI");
 title("Red Agent Mean Norm Error");
 xlabel("Time Step");
 ylabel("Mean Norm Error");
