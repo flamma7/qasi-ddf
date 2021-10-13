@@ -14,7 +14,7 @@ function [] = qasi_ddf(mc_run_num)
     % PRO TIP: just maintain a ledger and index, it's so much easier than maintaining a state
 
     if nargin < 1
-        rng(1);
+        rng(7);
         close all; clear all; clc;
         disp("Initializing with random seed 0");
         SAVE_FILE = false; 
@@ -66,11 +66,11 @@ function [] = qasi_ddf(mc_run_num)
     % My tuning parameters are process noise and measurement noise for the sonar and modem
     % Let's just tune with sonars for now
     q_perceived_tracking = 0.05;
-    w_perceived_nonlinear = 0.2;
-    w_perceived_modem_range = 0.1;
+    w_perceived_nonlinear = 0.03;
+    w_perceived_modem_range = 0.03;
     w_perceived_modem_azimuth = w_perceived_nonlinear;
 
-    w_perceived_sonar_range = 0.1;
+    w_perceived_sonar_range = 0.03;
     w_perceived_sonar_azimuth = w_perceived_nonlinear;
 
     Q = eye(TOTAL_STATES);
@@ -249,8 +249,8 @@ function [] = qasi_ddf(mc_run_num)
     % plot_error_nav(error, P_nav_history, NUM_LOOPS, STATES, AGENT_TO_PLOT);
     %plot_norm_error(error);
 
-    % plot_error(x_hat_error_history, P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_AGENTS, BLUE_NUM, 1, "1's Tracking");
-    % plot_error(x_hat_error_history, P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_AGENTS, BLUE_NUM, 2, "2's Tracking");
+    % plot_error(x_hat_error_history, P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_AGENTS, BLUE_NUM, 1, "Agent 1's Tracking Filter Error Plots");
+    plot_error(x_hat_error_history, P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_AGENTS, BLUE_NUM, 2, "Agent 2's Tracking Filter Error Plots");
 
     % plot_error(common_error_history, common_P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_AGENTS, BLUE_NUM, 1, "Common");
 
