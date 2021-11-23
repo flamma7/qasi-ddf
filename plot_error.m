@@ -56,6 +56,8 @@ function [] = plot_error(error, P_history, NUM_LOOPS, TRACK_STATES, STATES, NUM_
             plot(bound, "green");
             hold on;
             plot(-bound,"green");
+            lgd = legend("Error", "2\sigma Bound");
+            lgd.FontSize = 12;
 
             % For modem activity...
             % xline(modem_times, '--b');
