@@ -2,4 +2,5 @@
 notes.m
 test_covariance_plot.m
 monte_carlos
+monte_carlos_old
 *.png
